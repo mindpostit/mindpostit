@@ -1,0 +1,553 @@
+import React, { useState, useEffect } from 'react';
+import { MessageCircle, Shield } from 'lucide-react';
+import { createPost, getPosts, addEcho, addComment } from './firebase';
+import { generateAIResponse, getRandomDelay } from './aiService';
+import Admin from './Admin';
+
+const App = () => {
+  const [view, setView] = useState('feed');
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [sortBy, setSortBy] = useState('최신순');
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [newComment, setNewComment] = useState('');
+  const [showRipple, setShowRipple] = useState(false);
+  
+  const [content, setContent] = useState('');
+  const [wantDeeper, setWantDeeper] = useState(false);
+  const [listenWithComments, setListenWithComments] = useState(true);
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    setLoading(true);
+    const result = await getPosts();
+    if (result.success) {
+      setPosts(result.posts.map((post, index) => ({
+        ...post,
+        timeAgo: getTimeAgo(post.createdAt)
+      })));
+    }
+    setLoading(false);
+  };
+
+  const getTimeAgo = (timestamp) => {
+    if (!timestamp) return '방금';
+    const now = new Date();
+    const posted = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const diff = Math.floor((now - posted) / 1000);
+    
+    if (diff < 60) return '방금';
+    if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+    return `${Math.floor(diff / 86400)}일 전`;
+  };
+
+  const postitColors = [
+    'bg-yellow-100 border-yellow-200',
+    'bg-pink-100 border-pink-200',
+    'bg-blue-100 border-blue-200',
+    'bg-green-100 border-green-200',
+    'bg-purple-100 border-purple-200'
+  ];
+
+  const handleSubmit = async () => {
+    if (!content.trim()) return;
+    
+    setShowRipple(true);
+    setTimeout(() => setShowRipple(false), 2000);
+    
+    const result = await createPost(content, wantDeeper);
+    
+    if (result.success) {
+      const postContent = content;
+      
+      setContent('');
+      setWantDeeper(false);
+      setListenWithComments(true);
+      
+      await loadPosts();
+      
+      setTimeout(() => setView('feed'), 500);
+      
+      if (listenWithComments) {
+        setTimeout(async () => {
+          const aiResponse = await generateAIResponse(postContent);
+          if (aiResponse.success && result.id) {
+            const posts = await getPosts();
+            const targetPost = posts.posts.find(p => p.id === result.id);
+            
+            if (targetPost) {
+              await addComment(result.id, aiResponse.message, targetPost.comments);
+              await loadPosts();
+            }
+          }
+        }, getRandomDelay());
+      }
+    } else {
+      alert('글 작성에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleEcho = async (postId, currentEchoes) => {
+    const result = await addEcho(postId, currentEchoes);
+    if (result.success) {
+      setPosts(posts.map(post => 
+        post.id === postId ? { ...post, echoes: post.echoes + 1 } : post
+      ));
+      
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost({ ...selectedPost, echoes: selectedPost.echoes + 1 });
+      }
+    }
+  };
+
+  const handleAddComment = async (postId) => {
+    if (!newComment.trim()) return;
+    
+    const post = posts.find(p => p.id === postId);
+    
+    const userComment = {
+      author: "나",
+      content: newComment,
+      createdAt: new Date().toISOString()
+    };
+    
+    const result = await addComment(postId, newComment, post.comments);
+    
+    if (result.success) {
+      const updatedPosts = posts.map(p => 
+        p.id === postId 
+          ? { ...p, comments: [...p.comments, result.comment] }
+          : p
+      );
+      setPosts(updatedPosts);
+      
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost({
+          ...selectedPost,
+          comments: [...selectedPost.comments, result.comment]
+        });
+      }
+      
+      const userCommentText = newComment;
+      setNewComment('');
+      
+      setTimeout(async () => {
+        const aiResponse = await generateAIResponse(
+          `원글: ${post.content}\n\n내 댓글: ${userCommentText}`
+        );
+        
+        if (aiResponse.success) {
+          const updatedPost = posts.find(p => p.id === postId);
+          await addComment(postId, aiResponse.message, [...updatedPost.comments, result.comment]);
+          await loadPosts();
+          
+          if (selectedPost && selectedPost.id === postId) {
+            const refreshedPosts = await getPosts();
+            const refreshedPost = refreshedPosts.posts.find(p => p.id === postId);
+            if (refreshedPost) {
+              setSelectedPost(refreshedPost);
+            }
+          }
+        }
+      }, getRandomDelay());
+    }
+  };
+
+  const sortedPosts = [...posts].sort((a, b) => {
+    if (sortBy === '최신순') {
+      return 0;
+    } else {
+      return b.echoes - a.echoes;
+    }
+  });
+
+  const EchoIcon = ({ count = 0, className = "" }) => {
+    if (count === 0) {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
+    } else if (count <= 3) {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+          <circle cx="12" cy="12" r="7" opacity="0.5"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
+    } else if (count <= 10) {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+          <circle cx="12" cy="12" r="10" opacity="0.3"/>
+          <circle cx="12" cy="12" r="7" opacity="0.5"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
+    } else {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`${className} animate-pulse`}>
+          <circle cx="12" cy="12" r="10" opacity="0.3"/>
+          <circle cx="12" cy="12" r="7" opacity="0.5"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
+    }
+  };
+
+  const PostCard = ({ post, onClick, index }) => {
+    const colorClass = postitColors[index % postitColors.length];
+    
+    return (
+      <div 
+        onClick={onClick}
+        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-2 relative group`}
+        style={{
+          boxShadow: '4px 4px 8px rgba(0,0,0,0.1)',
+        }}
+      >
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-white/40 rounded-sm" 
+             style={{boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}/>
+        
+        <div className="relative z-10">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-800">{post.author}</span>
+              <span className="text-xs text-gray-500">•</span>
+              <span className="text-xs text-gray-500">{post.timeAgo}</span>
+            </div>
+            {post.wantDeeper && (
+              <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
+                <span>💬 더 듣고싶어요</span>
+              </div>
+            )}
+          </div>
+          
+          <p className="text-gray-900 mb-4 line-clamp-3 font-medium leading-relaxed">{post.content}</p>
+          
+          <div className="flex items-center gap-4 text-sm text-gray-700">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEcho(post.id, post.echoes);
+              }}
+              className="flex items-center gap-1.5 hover:text-purple-600 transition-colors group/echo"
+            >
+              <div className="relative">
+                <EchoIcon count={post.echoes} />
+                <div className="absolute inset-0 scale-0 group-hover/echo:scale-150 opacity-0 group-hover/echo:opacity-30 transition-all duration-500">
+                  <EchoIcon count={post.echoes} />
+                </div>
+              </div>
+              <span className="font-bold">{post.echoes}번의 메아리</span>
+            </button>
+            <div className="flex items-center gap-1.5">
+              <MessageCircle size={18} />
+              <span className="font-bold">{post.comments?.length || 0}개의 울림</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const PostDetail = ({ post, onClose }) => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6">
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+          >
+            ← 돌아가기
+          </button>
+        </div>
+        
+        <div className="p-4 md:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm font-bold text-gray-800">{post.author}</span>
+            <span className="text-xs text-gray-400">•</span>
+            <span className="text-xs text-gray-400">{post.timeAgo}</span>
+            {post.wantDeeper && (
+              <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
+                <span>💬 더 듣고싶어요</span>
+              </div>
+            )}
+          </div>
+          
+          <p className="text-gray-900 mb-6 whitespace-pre-wrap leading-relaxed font-medium">{post.content}</p>
+          
+          <div className="flex items-center gap-4 text-sm text-gray-700 mb-6 pb-6 border-b">
+            <button 
+              onClick={() => handleEcho(post.id, post.echoes)}
+              className="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
+            >
+              <EchoIcon count={post.echoes} />
+              <span className="font-bold">{post.echoes}번의 메아리</span>
+            </button>
+          </div>
+          
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <MessageCircle size={16} className="text-purple-600" />
+              울림 {post.comments?.length || 0}개
+            </h3>
+          </div>
+          
+          <div className="space-y-3 mb-6">
+            {(post.comments || []).map((comment, idx) => (
+              <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-bold text-gray-800">{comment.author}</span>
+                  <span className="text-xs text-gray-400">•</span>
+                  <span className="text-xs text-gray-400">
+                    {comment.time || getTimeAgo(comment.createdAt)}
+                  </span>
+                </div>
+                <p className="text-gray-800 text-sm leading-relaxed">{comment.content}</p>
+              </div>
+            ))}
+          </div>
+          
+          <div className="space-y-3">
+            <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="당신의 울림을 남겨주세요..."
+              className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
+              rows="3"
+            />
+            <button
+              onClick={() => handleAddComment(post.id)}
+              className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
+            >
+              울림 보내기
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (showAdmin) {
+    return <Admin onBack={() => setShowAdmin(false)} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-white relative overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none opacity-20">
+        <svg className="absolute top-20 left-10 w-64 h-64 animate-pulse-slow">
+          <circle cx="128" cy="128" r="100" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="70" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="40" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+        </svg>
+        <svg className="absolute bottom-20 right-10 w-96 h-96 animate-pulse-slow" style={{animationDelay: '1s'}}>
+          <circle cx="192" cy="192" r="150" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="110" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="70" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+        </svg>
+      </div>
+
+      {showRipple && (
+        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+          <div className="relative w-96 h-96">
+            <div className="absolute inset-0 rounded-full bg-yellow-400 opacity-30 animate-ripple-out"/>
+            <div className="absolute inset-0 rounded-full bg-orange-400 opacity-20 animate-ripple-out" style={{animationDelay: '0.3s'}}/>
+            <div className="absolute inset-0 rounded-full bg-amber-400 opacity-10 animate-ripple-out" style={{animationDelay: '0.6s'}}/>
+          </div>
+        </div>
+      )}
+
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 border-yellow-200">
+        <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="relative">
+                <EchoIcon count={5} />
+                <div className="absolute inset-0 animate-ping opacity-20">
+                  <EchoIcon count={5} />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  마인드포스팃
+                </h1>
+                <p className="text-[10px] md:text-xs text-gray-600 font-medium">메아리가 되어 돌아오는 마음</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setView(view === 'feed' ? 'write' : 'feed')}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:from-amber-600 hover:to-orange-600 transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
+              >
+                {view === 'feed' ? '📝 마음 남기기' : '📋 메아리 보기'}
+              </button>
+              <button
+                onClick={() => setShowAdmin(true)}
+                className="p-2 text-gray-600 hover:text-amber-600 transition-all"
+                title="관리자"
+              >
+                <Shield size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-6 md:py-8 relative z-10">
+        {view === 'feed' ? (
+          <>
+            <div className="mb-6 flex justify-center">
+              <div className="inline-flex bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-md border-2 border-yellow-200">
+                {['최신순', '메아리순'].map((sortOption) => (
+                  <button
+                    key={sortOption}
+                    onClick={() => setSortBy(sortOption)}
+                    className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                      sortBy === sortOption
+                        ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md'
+                        : 'text-gray-700 hover:text-gray-900'
+                    }`}
+                  >
+                    {sortOption}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <div className="text-center mb-6 md:mb-8">
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">울려퍼진 마음들</h2>
+                <p className="text-sm md:text-base text-gray-700 font-medium">여러분의 이야기가 메아리가 되어 돌아오고 있어요</p>
+              </div>
+              
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent"></div>
+                  <p className="mt-4 text-gray-600">마음들을 불러오고 있어요...</p>
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 mb-4">아직 마음이 남겨지지 않았어요</p>
+                  <button
+                    onClick={() => setView('write')}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full hover:from-amber-600 hover:to-orange-600 transition-all font-bold shadow-md"
+                  >
+                    첫 번째 마음 남기기
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {sortedPosts.map((post, index) => (
+                    <PostCard 
+                      key={post.id} 
+                      post={post}
+                      index={index}
+                      onClick={() => setSelectedPost(post)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {selectedPost && (
+              <PostDetail 
+                post={selectedPost} 
+                onClose={() => {
+                  setSelectedPost(null);
+                  setNewComment('');
+                }}
+              />
+            )}
+          </>
+        ) : (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-yellow-100 border-2 border-yellow-300 rounded-2xl p-6 md:p-8 shadow-xl relative"
+                 style={{boxShadow: '8px 8px 16px rgba(0,0,0,0.15)'}}>
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-20 h-8 bg-white/50 rounded-sm" 
+                   style={{boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
+              
+              <div className="text-center mb-6">
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">오늘 하루 어떠셨나요?</h2>
+                <p className="text-sm md:text-base text-gray-700 font-medium">가볍게 남긴 당신의 마음이 메아리가 되어 돌아올 거예요</p>
+              </div>
+              
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="여기에 마음을 남겨주세요..."
+                className="w-full p-4 md:p-5 border-2 border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-5 resize-none bg-yellow-50 font-medium text-gray-900 placeholder-gray-500"
+                rows="8"
+              />
+              
+              <div className="space-y-3 mb-5">
+                <label className="flex items-start gap-3 p-4 bg-white/60 border-2 border-blue-300 rounded-xl cursor-pointer hover:bg-white/80 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={listenWithComments}
+                    onChange={(e) => setListenWithComments(e.target.checked)}
+                    className="mt-1 w-5 h-5 text-blue-500 rounded"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-gray-900 mb-1">울림으로 듣기</div>
+                    <div className="text-sm text-gray-700">천천히 메아리처럼 대화해요</div>
+                  </div>
+                </label>
+                
+                <label className="flex items-start gap-3 p-4 bg-white/60 border-2 border-amber-300 rounded-xl cursor-pointer hover:bg-white/80 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={wantDeeper}
+                    onChange={(e) => setWantDeeper(e.target.checked)}
+                    className="mt-1 w-5 h-5 text-amber-500 rounded"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-gray-900 mb-1">더 많이 들려주고 싶어요</div>
+                    <div className="text-sm text-gray-700">들림이와 더 깊게 이야기 나눌 수 있어요</div>
+                  </div>
+                </label>
+              </div>
+              
+              <button
+                onClick={handleSubmit}
+                disabled={!content.trim()}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 md:py-4 rounded-xl hover:from-amber-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-black text-base md:text-lg shadow-lg hover:shadow-xl"
+              >
+                마음 남기기
+              </button>
+              <p className="text-center text-xs md:text-sm text-gray-600 mt-3 font-medium">익명으로 안전하게 남겨집니다</p>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <style>{`
+        @keyframes ripple-out {
+          0% { transform: scale(0); opacity: 0.6; }
+          100% { transform: scale(4); opacity: 0; }
+        }
+        
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.2; transform: scale(1); }
+          50% { opacity: 0.3; transform: scale(1.05); }
+        }
+        
+        .animate-ripple-out {
+          animation: ripple-out 2s ease-out forwards;
+        }
+        
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default App;
