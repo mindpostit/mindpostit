@@ -12,7 +12,6 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   
   const [selectedPost, setSelectedPost] = useState(null);
-  const [newComment, setNewComment] = useState('');
   const [showRipple, setShowRipple] = useState(false);
   
   const [content, setContent] = useState('');
@@ -106,18 +105,12 @@ const App = () => {
     }
   };
 
-  const handleAddComment = async (postId) => {
-    if (!newComment.trim()) return;
+  const handleAddComment = async (postId, commentText) => {
+    if (!commentText.trim()) return;
     
     const post = posts.find(p => p.id === postId);
     
-    const userComment = {
-      author: "나",
-      content: newComment,
-      createdAt: new Date().toISOString()
-    };
-    
-    const result = await addComment(postId, newComment, post.comments);
+    const result = await addComment(postId, commentText, post.comments);
     
     if (result.success) {
       const updatedPosts = posts.map(p => 
@@ -134,12 +127,9 @@ const App = () => {
         });
       }
       
-      const userCommentText = newComment;
-      setNewComment('');
-      
       setTimeout(async () => {
         const aiResponse = await generateAIResponse(
-          `원글: ${post.content}\n\n내 댓글: ${userCommentText}`
+          `원글: ${post.content}\n\n내 댓글: ${commentText}`
         );
         
         if (aiResponse.success) {
@@ -256,85 +246,95 @@ const App = () => {
     );
   };
 
-  const PostDetail = ({ post, onClose }) => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6">
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-          >
-            ← 돌아가기
-          </button>
-        </div>
-        
-        <div className="p-4 md:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm font-bold text-gray-800">{post.author}</span>
-            <span className="text-xs text-gray-400">•</span>
-            <span className="text-xs text-gray-400">{post.timeAgo}</span>
-            {post.wantDeeper && (
-              <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
-                <span>💬 더 듣고싶어요</span>
-              </div>
-            )}
-          </div>
-          
-          <p className="text-gray-900 mb-6 whitespace-pre-wrap leading-relaxed font-medium">{post.content}</p>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-700 mb-6 pb-6 border-b">
+  const PostDetail = ({ post, onClose }) => {
+    const [localComment, setLocalComment] = useState('');
+    
+    const handleSubmitComment = () => {
+      if (localComment.trim()) {
+        handleAddComment(post.id, localComment);
+        setLocalComment('');
+      }
+    };
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6">
             <button 
-              onClick={() => handleEcho(post.id, post.echoes)}
-              className="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 text-sm font-medium"
             >
-              <EchoIcon count={post.echoes} />
-              <span className="font-bold">{post.echoes}번의 메아리</span>
+              ← 돌아가기
             </button>
           </div>
           
-          <div className="mb-4">
-            <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <MessageCircle size={16} className="text-purple-600" />
-              울림 {post.comments?.length || 0}개
-            </h3>
-          </div>
-          
-          <div className="space-y-3 mb-6">
-            {(post.comments || []).map((comment, idx) => (
-              <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-bold text-gray-800">{comment.author}</span>
-                  <span className="text-xs text-gray-400">•</span>
-                  <span className="text-xs text-gray-400">
-                    {comment.time || getTimeAgo(comment.createdAt)}
-                  </span>
+          <div className="p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm font-bold text-gray-800">{post.author}</span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-gray-400">{post.timeAgo}</span>
+              {post.wantDeeper && (
+                <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
+                  <span>💬 더 듣고싶어요</span>
                 </div>
-                <p className="text-gray-800 text-sm leading-relaxed">{comment.content}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="space-y-3">
-            <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onCompositionEnd={(e) => setNewComment(e.target.value)}
-              placeholder="당신의 울림을 남겨주세요..."
-              className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
-              rows="3"
-            />
-            <button
-              onClick={() => handleAddComment(post.id)}
-              className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
-            >
-              울림 보내기
-            </button>
+              )}
+            </div>
+            
+            <p className="text-gray-900 mb-6 whitespace-pre-wrap leading-relaxed font-medium">{post.content}</p>
+            
+            <div className="flex items-center gap-4 text-sm text-gray-700 mb-6 pb-6 border-b">
+              <button 
+                onClick={() => handleEcho(post.id, post.echoes)}
+                className="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
+              >
+                <EchoIcon count={post.echoes} />
+                <span className="font-bold">{post.echoes}번의 메아리</span>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <MessageCircle size={16} className="text-purple-600" />
+                울림 {post.comments?.length || 0}개
+              </h3>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              {(post.comments || []).map((comment, idx) => (
+                <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold text-gray-800">{comment.author}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-xs text-gray-400">
+                      {comment.time || getTimeAgo(comment.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-gray-800 text-sm leading-relaxed">{comment.content}</p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="space-y-3">
+              <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
+              <textarea
+                value={localComment}
+                onChange={(e) => setLocalComment(e.target.value)}
+                placeholder="당신의 울림을 남겨주세요..."
+                className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
+                rows="3"
+              />
+              <button
+                onClick={handleSubmitComment}
+                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
+              >
+                울림 보내기
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (showAdmin) {
     return <Admin onBack={() => setShowAdmin(false)} />;
@@ -462,7 +462,6 @@ const App = () => {
                 post={selectedPost} 
                 onClose={() => {
                   setSelectedPost(null);
-                  setNewComment('');
                 }}
               />
             )}
