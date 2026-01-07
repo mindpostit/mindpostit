@@ -319,6 +319,7 @@ const App = () => {
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
+              onCompositionEnd={(e) => setNewComment(e.target.value)}
               placeholder="당신의 울림을 남겨주세요..."
               className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
               rows="3"
