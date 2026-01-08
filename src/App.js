@@ -259,12 +259,15 @@ const App = () => {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6">
+          <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6 z-10">
             <button 
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-base font-medium bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all"
             >
-              ← 돌아가기
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              돌아가기
             </button>
           </div>
           
