@@ -368,7 +368,7 @@ const App = () => {
         </div>
       )}
 
-      <header className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 border-yellow-200">
+      <header className={`bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 border-yellow-200 transition-all ${selectedPost ? 'hidden' : ''}`}>
         <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-3">
