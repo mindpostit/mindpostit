@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Shield } from 'lucide-react';
-import { createPost, getPosts, addEcho, addComment } from './firebase';
+import { createPost, getPosts, addEchoWithMessage, addComment, getTopics } from './firebase';
 import { generateAIResponse, getRandomDelay } from './aiService';
 import Admin from './Admin';
 
@@ -9,29 +9,62 @@ const App = () => {
   const [showAdmin, setShowAdmin] = useState(false);
   const [sortBy, setSortBy] = useState('최신순');
   const [posts, setPosts] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [selectedPost, setSelectedPost] = useState(null);
   const [showRipple, setShowRipple] = useState(false);
+  const [showEchoModal, setShowEchoModal] = useState(false);
+  const [echoingPost, setEchoingPost] = useState(null);
   
   const [content, setContent] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState(null);
   const [wantDeeper, setWantDeeper] = useState(false);
   const [listenWithComments, setListenWithComments] = useState(true);
 
+  // 공감 메시지 목록
+  const echoMessageOptions = [
+    "공감해요",
+    "비공감해요",
+    "중립이에요"
+  ];
+
   useEffect(() => {
     loadPosts();
+    loadTopics();
   }, []);
 
   const loadPosts = async () => {
     setLoading(true);
     const result = await getPosts();
     if (result.success) {
-      setPosts(result.posts.map((post, index) => ({
+      // 24시간 지난 글 필터링 (자정 기준)
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      
+      const filteredPosts = result.posts.filter(post => {
+        if (!post.createdAt) return true;
+        
+        const postDate = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+        const postMidnight = new Date(postDate.getFullYear(), postDate.getMonth(), postDate.getDate(), 0, 0, 0);
+        
+        // 오늘 자정과 글 작성일의 자정을 비교
+        return postMidnight.getTime() === todayMidnight.getTime();
+      });
+      
+      setPosts(filteredPosts.map((post, index) => ({
         ...post,
         timeAgo: getTimeAgo(post.createdAt)
       })));
     }
     setLoading(false);
+  };
+
+  const loadTopics = async () => {
+    const result = await getTopics();
+    if (result.success) {
+      setTopics(result.topics);
+    }
   };
 
   const getTimeAgo = (timestamp) => {
@@ -60,12 +93,13 @@ const App = () => {
     setShowRipple(true);
     setTimeout(() => setShowRipple(false), 2000);
     
-    const result = await createPost(content, wantDeeper);
+    const result = await createPost(content, wantDeeper, selectedTopic);
     
     if (result.success) {
       const postContent = content;
       
       setContent('');
+      setSelectedTopic(null);
       setWantDeeper(false);
       setListenWithComments(true);
       
@@ -92,17 +126,43 @@ const App = () => {
     }
   };
 
-  const handleEcho = async (postId, currentEchoes) => {
-    const result = await addEcho(postId, currentEchoes);
+  const handleEchoClick = (post) => {
+    setEchoingPost(post);
+    setShowEchoModal(true);
+  };
+
+  const handleEchoWithMessage = async (message) => {
+    if (!echoingPost) return;
+    
+    const result = await addEchoWithMessage(
+      echoingPost.id, 
+      message, 
+      echoingPost.echoMessages || {}
+    );
+    
     if (result.success) {
+      // 로컬 상태 업데이트
+      const updatedMessages = { ...echoingPost.echoMessages };
+      updatedMessages[message] = (updatedMessages[message] || 0) + 1;
+      const totalEchoes = Object.values(updatedMessages).reduce((sum, count) => sum + count, 0);
+      
       setPosts(posts.map(post => 
-        post.id === postId ? { ...post, echoes: post.echoes + 1 } : post
+        post.id === echoingPost.id 
+          ? { ...post, echoes: totalEchoes, echoMessages: updatedMessages } 
+          : post
       ));
       
-      if (selectedPost && selectedPost.id === postId) {
-        setSelectedPost({ ...selectedPost, echoes: selectedPost.echoes + 1 });
+      if (selectedPost && selectedPost.id === echoingPost.id) {
+        setSelectedPost({ 
+          ...selectedPost, 
+          echoes: totalEchoes, 
+          echoMessages: updatedMessages 
+        });
       }
     }
+    
+    setShowEchoModal(false);
+    setEchoingPost(null);
   };
 
   const handleAddComment = async (postId, commentText) => {
@@ -211,11 +271,18 @@ const App = () => {
               <span className="text-xs text-gray-500">•</span>
               <span className="text-xs text-gray-500">{post.timeAgo}</span>
             </div>
-            {post.wantDeeper && (
-              <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
-                <span>💬 더 듣고싶어요</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {post.topic && (
+                <div className="flex items-center gap-1 text-xs text-blue-700 bg-white/60 px-2 py-0.5 rounded-full border border-blue-300">
+                  <span>💭 {post.topic}</span>
+                </div>
+              )}
+              {post.wantDeeper && (
+                <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
+                  <span>💬 더 듣고싶어요</span>
+                </div>
+              )}
+            </div>
           </div>
           
           <p className="text-gray-900 mb-4 line-clamp-3 font-medium leading-relaxed">{post.content}</p>
@@ -224,7 +291,7 @@ const App = () => {
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                handleEcho(post.id, post.echoes);
+                handleEchoClick(post);
               }}
               className="flex items-center gap-1.5 hover:text-purple-600 transition-colors group/echo"
             >
@@ -236,6 +303,7 @@ const App = () => {
               </div>
               <span className="font-bold">{post.echoes}번의 메아리</span>
             </button>
+            
             <div className="flex items-center gap-1.5">
               <MessageCircle size={18} />
               <span className="font-bold">{post.comments?.length || 0}개의 울림</span>
@@ -285,14 +353,30 @@ const App = () => {
             
             <p className="text-gray-900 mb-6 whitespace-pre-wrap leading-relaxed font-medium">{post.content}</p>
             
-            <div className="flex items-center gap-4 text-sm text-gray-700 mb-6 pb-6 border-b">
+            <div className="mb-6 pb-6 border-b">
               <button 
-                onClick={() => handleEcho(post.id, post.echoes)}
-                className="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
+                onClick={() => handleEchoClick(post)}
+                className="flex items-center gap-1.5 hover:text-purple-600 transition-colors mb-3"
               >
                 <EchoIcon count={post.echoes} />
-                <span className="font-bold">{post.echoes}번의 메아리</span>
+                <span className="font-bold text-sm text-gray-700">{post.echoes}번의 메아리</span>
               </button>
+              
+              {/* 공감 메시지 상세 표시 */}
+              {post.echoMessages && Object.keys(post.echoMessages).length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {Object.entries(post.echoMessages)
+                    .sort((a, b) => b[1] - a[1]) // 많은 순으로 정렬
+                    .map(([msg, count]) => (
+                      <div key={msg} className="flex items-center justify-between bg-purple-50 rounded-lg px-4 py-2 border border-purple-200">
+                        <span className="text-sm font-bold text-gray-800">{msg}</span>
+                        <span className="text-xs bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-bold">
+                          {count}명
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
             
             <div className="mb-4">
@@ -345,6 +429,39 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* 공감 메시지 선택 모달 */}
+      {showEchoModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEchoModal(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-black text-gray-900 mb-4 text-center">
+              공감을 남겨주세요 💜
+            </h3>
+            <div className="space-y-2">
+              {echoMessageOptions.map((message) => (
+                <button
+                  key={message}
+                  onClick={() => handleEchoWithMessage(message)}
+                  className="w-full bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 text-gray-900 py-3 rounded-xl transition-all font-bold border-2 border-purple-200 hover:border-purple-400 hover:scale-105"
+                >
+                  {message}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowEchoModal(false)}
+              className="w-full mt-4 text-gray-600 hover:text-gray-800 text-sm font-medium"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
       <div className="fixed inset-0 pointer-events-none opacity-20">
         <svg className="absolute top-20 left-10 w-64 h-64 animate-pulse-slow">
           <circle cx="128" cy="128" r="100" fill="none" stroke="#f59e0b" strokeWidth="1"/>
@@ -429,6 +546,7 @@ const App = () => {
               <div className="text-center mb-6 md:mb-8">
                 <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">울려퍼진 마음들</h2>
                 <p className="text-sm md:text-base text-gray-700 font-medium">여러분의 이야기가 메아리가 되어 돌아오고 있어요</p>
+                <p className="text-xs text-amber-600 font-bold mt-2">⏰ 모든 글은 내일 자정에 사라집니다</p>
               </div>
               
               {loading ? (
@@ -481,10 +599,44 @@ const App = () => {
                 <p className="text-sm md:text-base text-gray-700 font-medium">가볍게 남긴 당신의 마음이 메아리가 되어 돌아올 거예요</p>
               </div>
               
+              {/* 주제 선택 */}
+              {topics.length > 0 && (
+                <div className="mb-5">
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    💭 오늘의 주제를 선택해보세요 (선택사항)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedTopic(null)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                        selectedTopic === null
+                          ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md'
+                          : 'bg-white/60 text-gray-700 hover:bg-white border-2 border-gray-300'
+                      }`}
+                    >
+                      자유 주제
+                    </button>
+                    {topics.map((topic) => (
+                      <button
+                        key={topic.id}
+                        onClick={() => setSelectedTopic(topic.text)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                          selectedTopic === topic.text
+                            ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md'
+                            : 'bg-white/60 text-gray-700 hover:bg-white border-2 border-gray-300'
+                        }`}
+                      >
+                        {topic.text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="여기에 마음을 남겨주세요..."
+                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 자유롭게 써주세요...` : "여기에 마음을 남겨주세요..."}
                 className="w-full p-4 md:p-5 border-2 border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-5 resize-none bg-yellow-50 font-medium text-gray-900 placeholder-gray-500"
                 rows="8"
               />
@@ -524,7 +676,10 @@ const App = () => {
               >
                 마음 남기기
               </button>
-              <p className="text-center text-xs md:text-sm text-gray-600 mt-3 font-medium">익명으로 안전하게 남겨집니다</p>
+              <div className="text-center mt-3 space-y-1">
+                <p className="text-xs md:text-sm text-gray-600 font-medium">익명으로 안전하게 남겨집니다</p>
+                <p className="text-xs text-amber-600 font-bold">⏰ 내일 자정 00:00에 자동으로 사라집니다</p>
+              </div>
             </div>
           </div>
         )}

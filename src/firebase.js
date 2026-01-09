@@ -1,6 +1,5 @@
-import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, query, orderBy, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
-
+import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBG5MofvBCD0y93vL-gT39bx76rNJWvztE",
@@ -16,15 +15,64 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 글 작성 함수
-export const createPost = async (content, wantDeeper) => {
+// 주제 관련 함수들
+export const getTopics = async () => {
+  try {
+    const topicsQuery = query(collection(db, 'topics'), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(topicsQuery);
+    
+    const topics = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      topics.push({
+        id: doc.id,
+        text: data.text,
+        createdAt: data.createdAt
+      });
+    });
+    
+    return { success: true, topics };
+  } catch (error) {
+    console.error("주제 불러오기 오류:", error);
+    return { success: false, error, topics: [] };
+  }
+};
+
+export const createTopic = async (text) => {
+  try {
+    const docRef = await addDoc(collection(db, 'topics'), {
+      text: text,
+      createdAt: serverTimestamp()
+    });
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error("주제 작성 오류:", error);
+    return { success: false, error };
+  }
+};
+
+export const deleteTopic = async (topicId) => {
+  try {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'topics', topicId));
+    return { success: true };
+  } catch (error) {
+    console.error("주제 삭제 오류:", error);
+    return { success: false, error };
+  }
+};
+
+// 글 작성 함수 (topic 추가)
+export const createPost = async (content, wantDeeper, topic = null) => {
   try {
     const docRef = await addDoc(collection(db, 'posts'), {
       content: content,
       author: "익명",
       createdAt: serverTimestamp(),
       echoes: 0,
+      echoMessages: {}, // 공감 메시지 저장 (예: {"나도 그래요": 3, "힘내세요": 2})
       wantDeeper: wantDeeper,
+      topic: topic,
       comments: []
     });
     return { success: true, id: docRef.id };
@@ -48,7 +96,9 @@ export const getPosts = async () => {
         content: data.content,
         author: data.author,
         echoes: data.echoes || 0,
+        echoMessages: data.echoMessages || {},
         wantDeeper: data.wantDeeper || false,
+        topic: data.topic || null,
         comments: data.comments || [],
         createdAt: data.createdAt
       });
@@ -61,13 +111,23 @@ export const getPosts = async () => {
   }
 };
 
-// 메아리 추가 함수
-export const addEcho = async (postId, currentEchoes) => {
+// 메아리 추가 함수 (공감 메시지 포함)
+export const addEchoWithMessage = async (postId, message, currentEchoMessages) => {
   try {
     const postRef = doc(db, 'posts', postId);
+    
+    // 기존 메시지 카운트 증가 또는 새로 추가
+    const updatedMessages = { ...currentEchoMessages };
+    updatedMessages[message] = (updatedMessages[message] || 0) + 1;
+    
+    // 전체 메아리 수 계산
+    const totalEchoes = Object.values(updatedMessages).reduce((sum, count) => sum + count, 0);
+    
     await updateDoc(postRef, {
-      echoes: currentEchoes + 1
+      echoes: totalEchoes,
+      echoMessages: updatedMessages
     });
+    
     return { success: true };
   } catch (error) {
     console.error("메아리 추가 오류:", error);
@@ -97,13 +157,3 @@ export const addComment = async (postId, comment, currentComments) => {
 };
 
 export default db;
-// 글 삭제 함수
-export const deletePost = async (postId) => {
-  try {
-    await deleteDoc(doc(db, 'posts', postId));
-    return { success: true };
-  } catch (error) {
-    console.error("글 삭제 오류:", error);
-    return { success: false, error };
-  }
-};
