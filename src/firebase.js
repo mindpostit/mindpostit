@@ -156,4 +156,41 @@ export const addComment = async (postId, comment, currentComments) => {
   }
 };
 
+// 오늘의 포스트잇 가져오기/설정
+export const getTodaysFeaturedPost = async () => {
+  try {
+    const featuredQuery = query(collection(db, 'featured'), orderBy('date', 'desc'));
+    const querySnapshot = await getDocs(featuredQuery);
+    
+    if (querySnapshot.empty) return { success: true, featured: null };
+    
+    const latestFeatured = querySnapshot.docs[0].data();
+    const today = new Date().toDateString();
+    const featuredDate = latestFeatured.date?.toDate ? latestFeatured.date.toDate().toDateString() : null;
+    
+    // 오늘 날짜와 같으면 반환
+    if (featuredDate === today) {
+      return { success: true, featured: latestFeatured };
+    }
+    
+    return { success: true, featured: null };
+  } catch (error) {
+    console.error("오늘의 포스트잇 가져오기 오류:", error);
+    return { success: false, error, featured: null };
+  }
+};
+
+export const setTodaysFeaturedPost = async (postId) => {
+  try {
+    await addDoc(collection(db, 'featured'), {
+      postId: postId,
+      date: serverTimestamp()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("오늘의 포스트잇 설정 오류:", error);
+    return { success: false, error };
+  }
+};
+
 export default db;

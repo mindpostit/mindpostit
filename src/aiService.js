@@ -70,6 +70,30 @@ const generalResponses = [
   "당신의 이야기에 귀 기울이고 있어요. 힘든 시간도, 좋은 시간도 모두 소중해요. 함께 가요."
 ];
 
+// 동문서답형 응답 (30% 확률)
+const randomResponses = [
+  "나는 오늘 길에서 고양이를 봤어. 갑자기 생각났네.",
+  "창밖에 비가 오네. 따뜻한 차 한 잔 마시고 싶어.",
+  "어제 먹은 라면이 진짜 맛있었어. 그냥 떠올랐어.",
+  "지금 밖에 별이 예쁘게 떠 있을 것 같아.",
+  "나는 지금 음악 듣고 있어. 좋은 노래 하나 추천해줄까?",
+  "오늘 아침 토스트가 너무 타서 웃겼어.",
+  "갑자기 바다 보고 싶다. 파도 소리 들으면 좋겠어.",
+  "편의점 아이스크림이 생각나네. 뭐가 제일 맛있을까?",
+  "내일 날씨 어떨까? 산책하기 좋았으면 좋겠어.",
+  "방금 창문 열었더니 바람이 시원해.",
+  "오늘 하늘 색깔 진짜 예뻤어. 봤어?",
+  "갑자기 피자 먹고 싶다. 치즈 듬뿍.",
+  "요즘 자기 전에 책 읽는데 좋더라.",
+  "새벽 공기가 제일 좋은 것 같아.",
+  "그냥 아무 생각 없이 누워있고 싶은 날.",
+  "오늘 길에서 강아지가 꼬리 흔들길래 기분 좋았어.",
+  "따뜻한 물에 발 담그고 있으면 좋을 것 같아.",
+  "오늘 점심은 뭐 먹었어? 나는 김치찌개.",
+  "지금 졸려. 근데 자기는 아까워.",
+  "이불 속이 제일 따뜻해."
+];
+
 // 키워드 기반 감정 감지
 const detectEmotion = (text) => {
   const emotions = {
@@ -101,6 +125,20 @@ export const generateAIResponse = async (userPost) => {
     // 짧은 딜레이
     await new Promise(resolve => setTimeout(resolve, 500));
     
+    // 30% 확률로 동문서답형
+    const isRandom = Math.random() < 0.3;
+    
+    if (isRandom) {
+      // 동문서답형 (30%)
+      const message = randomResponses[Math.floor(Math.random() * randomResponses.length)];
+      console.log('✅ 들림이 응답 (동문서답형):', message);
+      return {
+        success: true,
+        message: message
+      };
+    }
+    
+    // 공감형 (70%)
     // 감정 감지
     const emotion = detectEmotion(userPost);
     
@@ -115,7 +153,7 @@ export const generateAIResponse = async (userPost) => {
       message = generalResponses[Math.floor(Math.random() * generalResponses.length)];
     }
     
-    console.log('✅ 들림이 응답:', message);
+    console.log('✅ 들림이 응답 (공감형):', message);
     
     return {
       success: true,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Shield } from 'lucide-react';
-import { createPost, getPosts, addEchoWithMessage, addComment, getTopics } from './firebase';
+import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
 import { generateAIResponse, getRandomDelay } from './aiService';
 import Admin from './Admin';
 
@@ -10,6 +10,7 @@ const App = () => {
   const [sortBy, setSortBy] = useState('최신순');
   const [posts, setPosts] = useState([]);
   const [topics, setTopics] = useState([]);
+  const [featuredPostId, setFeaturedPostId] = useState(null);
   const [loading, setLoading] = useState(true);
   
   const [selectedPost, setSelectedPost] = useState(null);
@@ -32,6 +33,7 @@ const App = () => {
   useEffect(() => {
     loadPosts();
     loadTopics();
+    loadAndSelectFeaturedPost();
   }, []);
 
   const loadPosts = async () => {
@@ -64,6 +66,40 @@ const App = () => {
     const result = await getTopics();
     if (result.success) {
       setTopics(result.topics);
+    }
+  };
+
+  const loadAndSelectFeaturedPost = async () => {
+    // 오늘의 포스트잇 확인
+    const featured = await getTodaysFeaturedPost();
+    
+    if (featured.success && featured.featured) {
+      // 이미 오늘 선정된 게 있으면 사용
+      setFeaturedPostId(featured.featured.postId);
+    } else {
+      // 없으면 자동 선정 (메아리가 가장 많은 글)
+      const result = await getPosts();
+      if (result.success && result.posts.length > 0) {
+        // 오늘 작성된 글 중 메아리가 가장 많은 글 선정
+        const today = new Date();
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        
+        const todaysPosts = result.posts.filter(post => {
+          if (!post.createdAt) return false;
+          const postDate = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+          const postMidnight = new Date(postDate.getFullYear(), postDate.getMonth(), postDate.getDate(), 0, 0, 0);
+          return postMidnight.getTime() === todayMidnight.getTime();
+        });
+        
+        if (todaysPosts.length > 0) {
+          // 메아리가 가장 많은 글 선정
+          const sortedByEchoes = [...todaysPosts].sort((a, b) => (b.echoes || 0) - (a.echoes || 0));
+          const selectedPost = sortedByEchoes[0];
+          
+          await setTodaysFeaturedPost(selectedPost.id);
+          setFeaturedPostId(selectedPost.id);
+        }
+      }
     }
   };
 
@@ -250,15 +286,17 @@ const App = () => {
     }
   };
 
-  const PostCard = ({ post, onClick, index }) => {
-    const colorClass = postitColors[index % postitColors.length];
+  const PostCard = ({ post, onClick, index, isFeatured = false }) => {
+    const colorClass = isFeatured 
+      ? 'bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 border-amber-400' 
+      : postitColors[index % postitColors.length];
     
     return (
       <div 
         onClick={onClick}
-        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-2 relative group`}
+        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-2 relative group ${isFeatured ? 'ring-4 ring-amber-400 ring-opacity-50' : ''}`}
         style={{
-          boxShadow: '4px 4px 8px rgba(0,0,0,0.1)',
+          boxShadow: isFeatured ? '8px 8px 20px rgba(251, 191, 36, 0.3)' : '4px 4px 8px rgba(0,0,0,0.1)',
         }}
       >
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-white/40 rounded-sm" 
@@ -565,16 +603,40 @@ const App = () => {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {sortedPosts.map((post, index) => (
-                    <PostCard 
-                      key={post.id} 
-                      post={post}
-                      index={index}
-                      onClick={() => setSelectedPost(post)}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* 오늘의 포스트잇 */}
+                  {featuredPostId && sortedPosts.find(p => p.id === featuredPostId) && (
+                    <div className="mb-8">
+                      <div className="text-center mb-4">
+                        <h3 className="text-lg md:text-xl font-black text-amber-600 mb-1">
+                          📌 오늘의 포스트잇
+                        </h3>
+                        <p className="text-xs text-gray-600">
+                          오늘 가장 많은 메아리를 받은 마음
+                        </p>
+                      </div>
+                      <div className="max-w-2xl mx-auto">
+                        <PostCard 
+                          post={sortedPosts.find(p => p.id === featuredPostId)}
+                          index={-1}
+                          onClick={() => setSelectedPost(sortedPosts.find(p => p.id === featuredPostId))}
+                          isFeatured={true}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {sortedPosts.filter(post => post.id !== featuredPostId).map((post, index) => (
+                      <PostCard 
+                        key={post.id} 
+                        post={post}
+                        index={index}
+                        onClick={() => setSelectedPost(post)}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </div>
             
