@@ -31,9 +31,9 @@ const App = () => {
 
   // 공감 메시지 목록
   const echoMessageOptions = [
-    "공감",
-    "비공감",
-    "중립"
+    "공감함",
+    "공감못함",
+    "모르겠음"
   ];
 
   useEffect(() => {
@@ -699,9 +699,6 @@ const App = () => {
                         <h3 className="text-lg md:text-xl font-black text-amber-600 mb-1">
                           📌 오늘의 포스팃
                         </h3>
-                        <p className="text-xs text-gray-600">
-                          오늘 최고의 글
-                        </p>
                       </div>
                       <div className="max-w-2xl mx-auto">
                         <PostCard 
@@ -745,7 +742,7 @@ const App = () => {
                    style={{boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
               
               <div className="text-center mb-6">
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">오늘 하루 어땠어?</h2>
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">맘대로 써!</h2>
                 <p className="text-sm md:text-base text-gray-700 font-medium">X발이라고 써도 돼. 24시간 후 사라지니까.</p>
               </div>
               
