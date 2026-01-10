@@ -122,11 +122,11 @@ const App = () => {
   };
 
   const postitColors = [
-    'bg-yellow-100 border-yellow-200',
-    'bg-pink-100 border-pink-200',
-    'bg-blue-100 border-blue-200',
-    'bg-green-100 border-green-200',
-    'bg-purple-100 border-purple-200'
+    'bg-stone-50 border-stone-200',
+    'bg-stone-50 border-stone-200',
+    'bg-stone-50 border-stone-200',
+    'bg-stone-50 border-stone-200',
+    'bg-stone-50 border-stone-200'
   ];
 
   const handleSubmit = async () => {
@@ -647,7 +647,10 @@ const App = () => {
                   <EchoIcon count={5} />
                 </div>
               </div>
-              <div>
+              <div 
+                className="cursor-pointer"
+                onClick={() => setView('feed')}
+              >
                 <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   마인드포스팃
                 </h1>
@@ -828,16 +831,10 @@ const App = () => {
                     />
                     <div className="flex-1">
                       <div className="font-bold text-gray-900 mb-1">💬 깊게 들어줘</div>
-                      <div className="text-sm text-gray-700">AI가 3턴 대화로 깊게 들어줘 (1/15까지 테스트)</div>
+                      <div className="text-sm text-gray-700">계속 이야기 들어줄게</div>
                     </div>
                   </label>
-                ) : (
-                  <div className="p-4 bg-gray-100 border-2 border-gray-300 rounded-xl">
-                    <div className="text-sm text-gray-600 text-center">
-                      테스트 기간이 종료되었습니다 (1/15까지)
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
               
               <button
