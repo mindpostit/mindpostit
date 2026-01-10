@@ -73,7 +73,8 @@ export const createPost = async (content, wantDeeper, topic = null) => {
       echoMessages: {}, // 공감 메시지 저장 (예: {"나도 그래요": 3, "힘내세요": 2})
       wantDeeper: wantDeeper,
       topic: topic,
-      comments: []
+      comments: [],
+      conversationHistory: [] // 3턴 대화 히스토리
     });
     return { success: true, id: docRef.id };
   } catch (error) {
@@ -190,6 +191,20 @@ export const setTodaysFeaturedPost = async (postId) => {
     return { success: true };
   } catch (error) {
     console.error("오늘의 포스트잇 설정 오류:", error);
+    return { success: false, error };
+  }
+};
+
+// 대화 히스토리 업데이트
+export const updateConversationHistory = async (postId, history) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      conversationHistory: history
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("대화 히스토리 업데이트 오류:", error);
     return { success: false, error };
   }
 };
