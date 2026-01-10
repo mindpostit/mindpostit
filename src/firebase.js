@@ -142,7 +142,8 @@ export const addComment = async (postId, comment, currentComments) => {
     const newComment = {
       author: "들림이",
       content: comment,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isTarot: comment.includes('🔮 타로로') // 타로 댓글 표시
     };
     
     await updateDoc(postRef, {

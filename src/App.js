@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Shield } from 'lucide-react';
 import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
 import { generateAIResponse, getRandomDelay } from './aiService';
+import { generateTarotReading, formatTarotAsComment } from './tarot-service';
 import Admin from './Admin';
 
 const App = () => {
@@ -25,9 +26,9 @@ const App = () => {
 
   // 공감 메시지 목록
   const echoMessageOptions = [
-    "공감해",
-    "다른 생각이야",
-    "그냥 들었어"
+    "공감",
+    "비공감",
+    "중립"
   ];
 
   useEffect(() => {
@@ -116,11 +117,11 @@ const App = () => {
   };
 
   const postitColors = [
-  'bg-white border-gray-300',
-  'bg-white border-gray-300',
-  'bg-white border-gray-300',
-  'bg-white border-gray-300',
-  'bg-white border-gray-300'
+    'bg-yellow-100 border-yellow-200',
+    'bg-pink-100 border-pink-200',
+    'bg-blue-100 border-blue-200',
+    'bg-green-100 border-green-200',
+    'bg-purple-100 border-purple-200'
   ];
 
   const handleSubmit = async () => {
@@ -133,6 +134,7 @@ const App = () => {
     
     if (result.success) {
       const postContent = content;
+      const needsTarot = wantDeeper; // wantDeeper = 타로 요청
       
       setContent('');
       setSelectedTopic(null);
@@ -143,7 +145,24 @@ const App = () => {
       
       setTimeout(() => setView('feed'), 500);
       
-      if (listenWithComments) {
+      // 타로 요청이면 AI 타로 생성
+      if (needsTarot) {
+        setTimeout(async () => {
+          const tarotReading = await generateTarotReading(postContent);
+          if (tarotReading.success && result.id) {
+            const posts = await getPosts();
+            const targetPost = posts.posts.find(p => p.id === result.id);
+            
+            if (targetPost) {
+              const tarotComment = formatTarotAsComment(tarotReading.reading);
+              await addComment(result.id, tarotComment, targetPost.comments);
+              await loadPosts();
+            }
+          }
+        }, getRandomDelay());
+      } 
+      // 일반 AI 댓글
+      else if (listenWithComments) {
         setTimeout(async () => {
           const aiResponse = await generateAIResponse(postContent);
           if (aiResponse.success && result.id) {
@@ -712,8 +731,8 @@ const App = () => {
                     className="mt-1 w-5 h-5 text-blue-500 rounded"
                   />
                   <div className="flex-1">
-                    <div className="font-bold text-gray-900 mb-1">그냥 들어줘</div>
-                    <div className="text-sm text-gray-700">공감 한마디 해줄게</div>
+                    <div className="font-bold text-gray-900 mb-1">울림으로 듣기</div>
+                    <div className="text-sm text-gray-700">메아리 대화</div>
                   </div>
                 </label>
                 
@@ -725,8 +744,8 @@ const App = () => {
                     className="mt-1 w-5 h-5 text-amber-500 rounded"
                   />
                   <div className="flex-1">
-                    <div className="font-bold text-gray-900 mb-1">🔮 깊게 들어줘</div>
-                    <div className="text-sm text-gray-700">실제 타로로 깊게 들어줄게(무료)</div>
+                    <div className="font-bold text-gray-900 mb-1">🔮 무료 타로 상담 받기</div>
+                    <div className="text-sm text-gray-700">실제 사람이 타로 봐줌 (선착순 5명)</div>
                   </div>
                 </label>
               </div>
