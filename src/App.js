@@ -25,9 +25,9 @@ const App = () => {
 
   // 공감 메시지 목록
   const echoMessageOptions = [
-    "공감해요",
-    "비공감해요",
-    "중립이에요"
+    "공감",
+    "비공감",
+    "중립"
   ];
 
   useEffect(() => {
@@ -583,8 +583,8 @@ const App = () => {
             <div className="mb-8">
               <div className="text-center mb-6 md:mb-8">
                 <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">울려퍼진 마음들</h2>
-                <p className="text-sm md:text-base text-gray-700 font-medium">여러분의 이야기가 메아리가 되어 돌아오고 있어요</p>
-                <p className="text-xs text-amber-600 font-bold mt-2">⏰ 모든 글은 내일 자정에 사라집니다</p>
+                <p className="text-sm md:text-base text-gray-700 font-medium">욕도, 지껄임도 모든 OK</p>
+                <p className="text-xs text-amber-600 font-bold mt-2">⏰ 내일 자정에 흔적 없이 사라짐</p>
               </div>
               
               {loading ? (
@@ -609,10 +609,10 @@ const App = () => {
                     <div className="mb-8">
                       <div className="text-center mb-4">
                         <h3 className="text-lg md:text-xl font-black text-amber-600 mb-1">
-                          📌 오늘의 포스트잇
+                          📌 오늘의 포스팃
                         </h3>
                         <p className="text-xs text-gray-600">
-                          오늘 가장 많은 메아리를 받은 마음
+                          오늘 최고의 글
                         </p>
                       </div>
                       <div className="max-w-2xl mx-auto">
@@ -657,15 +657,15 @@ const App = () => {
                    style={{boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
               
               <div className="text-center mb-6">
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">오늘 하루 어떠셨나요?</h2>
-                <p className="text-sm md:text-base text-gray-700 font-medium">가볍게 남긴 당신의 마음이 메아리가 되어 돌아올 거예요</p>
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">오늘 하루 어땠어?</h2>
+                <p className="text-sm md:text-base text-gray-700 font-medium">X발이라고 써도 돼. 24시간 후 사라지니까.</p>
               </div>
               
               {/* 주제 선택 */}
               {topics.length > 0 && (
                 <div className="mb-5">
                   <label className="block text-sm font-bold text-gray-900 mb-3">
-                    💭 오늘의 주제를 선택해보세요 (선택사항)
+                    💭 오늘의 주제를 선택해봐 (선택사항)
                   </label>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -698,7 +698,7 @@ const App = () => {
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 자유롭게 써주세요...` : "여기에 마음을 남겨주세요..."}
+                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 솔직하게..` : "진짜 솔직하게 써봐. 욕도 괜찮아."}
                 className="w-full p-4 md:p-5 border-2 border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-5 resize-none bg-yellow-50 font-medium text-gray-900 placeholder-gray-500"
                 rows="8"
               />
@@ -713,7 +713,7 @@ const App = () => {
                   />
                   <div className="flex-1">
                     <div className="font-bold text-gray-900 mb-1">울림으로 듣기</div>
-                    <div className="text-sm text-gray-700">천천히 메아리처럼 대화해요</div>
+                    <div className="text-sm text-gray-700">메아리 대화</div>
                   </div>
                 </label>
                 
@@ -725,8 +725,8 @@ const App = () => {
                     className="mt-1 w-5 h-5 text-amber-500 rounded"
                   />
                   <div className="flex-1">
-                    <div className="font-bold text-gray-900 mb-1">더 많이 들려주고 싶어요</div>
-                    <div className="text-sm text-gray-700">들림이와 더 깊게 이야기 나눌 수 있어요</div>
+                    <div className="font-bold text-gray-900 mb-1">🔮 무료 타로 상담 받기</div>
+                    <div className="text-sm text-gray-700">실제 사람이 타로 봐줌 (선착순 5명)</div>
                   </div>
                 </label>
               </div>
@@ -736,11 +736,12 @@ const App = () => {
                 disabled={!content.trim()}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 md:py-4 rounded-xl hover:from-amber-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-black text-base md:text-lg shadow-lg hover:shadow-xl"
               >
-                마음 남기기
+                털어놓기
               </button>
               <div className="text-center mt-3 space-y-1">
-                <p className="text-xs md:text-sm text-gray-600 font-medium">익명으로 안전하게 남겨집니다</p>
-                <p className="text-xs text-amber-600 font-bold">⏰ 내일 자정 00:00에 자동으로 사라집니다</p>
+                <p className="text-xs md:text-sm text-gray-600 font-medium">아무도 몰라. 완전 익명.</p>
+                <p className="text-xs text-amber-600 font-bold">⏰ 내일 자정에 흔적 없이 사라짐</p>
+                <p className="text-xs text-purple-600 font-bold">🔮 타로 신청하면 1-2일 안에 답변</p>
               </div>
             </div>
           </div>
