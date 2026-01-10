@@ -384,7 +384,7 @@ const App = () => {
               <span className="text-xs text-gray-400">{post.timeAgo}</span>
               {post.wantDeeper && (
                 <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
-                  <span>💬 더 듣고싶어요</span>
+                  <span>💬 타로 상담</span>
                 </div>
               )}
             </div>
