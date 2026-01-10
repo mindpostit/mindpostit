@@ -317,7 +317,7 @@ const App = () => {
               )}
               {post.wantDeeper && (
                 <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
-                  <span>💬 더 듣고싶어요</span>
+                  <span>💬 타로 상담</span>
                 </div>
               )}
             </div>
