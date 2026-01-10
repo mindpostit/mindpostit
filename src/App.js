@@ -26,9 +26,9 @@ const App = () => {
 
   // 공감 메시지 목록
   const echoMessageOptions = [
-    "공감",
-    "비공감",
-    "중립"
+    "공감해",
+    "글쎄..",
+    "그냥 들었어"
   ];
 
   useEffect(() => {
@@ -336,7 +336,7 @@ const App = () => {
               )}
               {post.wantDeeper && (
                 <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
-                  <span>💬 타로 상담</span>
+                  <span>🔮 깊게 들어줘</span>
                 </div>
               )}
             </div>
@@ -392,7 +392,7 @@ const App = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
-              돌아가기
+              메인화면 가기
             </button>
           </div>
           
@@ -401,9 +401,14 @@ const App = () => {
               <span className="text-sm font-bold text-gray-800">{post.author}</span>
               <span className="text-xs text-gray-400">•</span>
               <span className="text-xs text-gray-400">{post.timeAgo}</span>
+              {post.topic && (
+                <div className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-full ml-2 border border-blue-200">
+                  <span>💭 {post.topic}</span>
+                </div>
+              )}
               {post.wantDeeper && (
                 <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
-                  <span>💬 타로 상담</span>
+                  <span>🔮 깊게 들어줘</span>
                 </div>
               )}
             </div>
@@ -463,7 +468,7 @@ const App = () => {
               <textarea
                 value={localComment}
                 onChange={(e) => setLocalComment(e.target.value)}
-                placeholder="당신의 울림을 남겨주세요..."
+                placeholder="너의 울림을 남겨줘."
                 className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
                 rows="3"
               />
@@ -497,7 +502,7 @@ const App = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-black text-gray-900 mb-4 text-center">
-              공감을 남겨주세요 💜
+              느낌을 남겨줘 💜
             </h3>
             <div className="space-y-2">
               {echoMessageOptions.map((message) => (
@@ -760,7 +765,7 @@ const App = () => {
               <div className="text-center mt-3 space-y-1">
                 <p className="text-xs md:text-sm text-gray-600 font-medium">아무도 몰라. 완전 익명.</p>
                 <p className="text-xs text-amber-600 font-bold">⏰ 내일 자정에 흔적 없이 사라짐</p>
-                <p className="text-xs text-purple-600 font-bold">🔮 타로 신청하면 1-2일 안에 답변</p>
+                <p className="text-xs text-purple-600 font-bold">🔮 타로 신청하면 바로 답변</p>
               </div>
             </div>
           </div>
