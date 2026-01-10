@@ -251,47 +251,52 @@ const App = () => {
     const userMessage = conversationInput;
     setConversationInput('');
     
+    console.log('🎤 사용자 메시지:', userMessage);
+    console.log('📚 현재 히스토리:', post.conversationHistory);
+    
     // 사용자 메시지를 댓글로 추가
     await addComment(post.id, userMessage, post.comments);
     
     // 대화 히스토리 가져오기
     const history = post.conversationHistory || [];
     
-    // 새 사용자 메시지 추가
-    const newHistory = [
-      ...history,
-      { role: 'user', content: userMessage }
-    ];
+    console.log('📍 히스토리 길이:', history.length, '현재 턴:', Math.floor(history.length / 2) + 1);
     
     // AI 응답 생성
     setTimeout(async () => {
-      const aiResponse = await generateDeepConversation(userMessage, newHistory);
+      const aiResponse = await generateDeepConversation(userMessage, history);
+      
+      console.log('🤖 AI 응답:', aiResponse);
       
       if (aiResponse.success) {
         // AI 응답을 댓글로 추가
-        const updatedPost = posts.find(p => p.id === post.id);
-        await addComment(post.id, aiResponse.message, [...updatedPost.comments, { author: '익명', content: userMessage }]);
+        const refreshedPosts = await getPosts();
+        const currentPost = refreshedPosts.posts.find(p => p.id === post.id);
         
-        // 대화 히스토리 업데이트
-        const finalHistory = [
-          ...newHistory,
-          { role: 'assistant', content: aiResponse.message, turn: aiResponse.turn }
-        ];
-        await updateConversationHistory(post.id, finalHistory);
-        
-        // 대화 종료 체크
-        if (aiResponse.isLastTurn) {
-          setIsConversationActive(false);
-        }
-        
-        await loadPosts();
-        
-        // 선택된 글 새로고침
-        if (selectedPost && selectedPost.id === post.id) {
-          const refreshedPosts = await getPosts();
-          const refreshedPost = refreshedPosts.posts.find(p => p.id === post.id);
-          if (refreshedPost) {
-            setSelectedPost(refreshedPost);
+        if (currentPost) {
+          await addComment(post.id, aiResponse.message, currentPost.comments);
+          
+          // 대화 히스토리 업데이트
+          const finalHistory = [
+            ...history,
+            { role: 'user', content: userMessage },
+            { role: 'assistant', content: aiResponse.message }
+          ];
+          
+          console.log('💾 저장할 히스토리:', finalHistory);
+          
+          await updateConversationHistory(post.id, finalHistory);
+          
+          await loadPosts();
+          
+          // 선택된 글 새로고침
+          if (selectedPost && selectedPost.id === post.id) {
+            const updatedPosts = await getPosts();
+            const updatedPost = updatedPosts.posts.find(p => p.id === post.id);
+            if (updatedPost) {
+              setSelectedPost(updatedPost);
+              console.log('✅ 글 새로고침 완료:', updatedPost.conversationHistory);
+            }
           }
         }
       }
@@ -499,7 +504,7 @@ const App = () => {
             
             <div className="space-y-3">
               {/* 3턴 대화 중이면 대화 계속하기 UI */}
-              {post.wantDeeper && post.conversationHistory && post.conversationHistory.length > 0 && post.conversationHistory.length < 6 ? (
+              {post.conversationHistory && post.conversationHistory.length > 0 && post.conversationHistory.length < 6 ? (
                 <>
                   <label className="block text-sm font-bold text-purple-800">💬 대화 계속하기</label>
                   <textarea
