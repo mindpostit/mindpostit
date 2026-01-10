@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Shield } from 'lucide-react';
-import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost, updateConversationHistory } from './firebase';
-import { generateAIResponse, getRandomDelay } from './aiService';
-import { generateTarotReading, formatTarotAsComment } from './tarot-service';
-import { generateDeepConversation, isTestActive } from './deep-conversation-service';
+import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
 import Admin from './Admin';
 
 const App = () => {
@@ -24,10 +21,6 @@ const App = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [wantDeeper, setWantDeeper] = useState(false);
   const [listenWithComments, setListenWithComments] = useState(true);
-  
-  // 3턴 대화 상태
-  const [conversationInput, setConversationInput] = useState('');
-  const [isConversationActive, setIsConversationActive] = useState(false);
 
   // 공감 메시지 목록
   const echoMessageOptions = [
@@ -149,31 +142,7 @@ const App = () => {
       
       setTimeout(() => setView('feed'), 500);
       
-      // 무조건 3턴 AI 시작 (가교 역할)
-      if (isTestActive()) {
-        setTimeout(async () => {
-          const firstResponse = await generateDeepConversation(postContent, []);
-          
-          if (firstResponse.success && result.id) {
-            const posts = await getPosts();
-            const targetPost = posts.posts.find(p => p.id === result.id);
-            
-            if (targetPost) {
-              // 첫 번째 AI 응답을 댓글로 추가
-              await addComment(result.id, firstResponse.message, targetPost.comments);
-              
-              // 대화 히스토리 저장
-              const history = [
-                { role: 'user', content: postContent },
-                { role: 'assistant', content: firstResponse.message, turn: 1 }
-              ];
-              await updateConversationHistory(result.id, history);
-              
-              await loadPosts();
-            }
-          }
-        }, getRandomDelay());
-      }
+      // AI 제거 - 사람끼리만 소통
     } else {
       alert('글 작성에 실패했습니다. 다시 시도해주세요.');
     }
@@ -245,64 +214,6 @@ const App = () => {
   };
 
   // 3턴 대화 계속하기
-  const handleContinueConversation = async (post) => {
-    if (!conversationInput.trim()) return;
-    
-    const userMessage = conversationInput;
-    setConversationInput('');
-    
-    console.log('🎤 사용자 메시지:', userMessage);
-    console.log('📚 현재 히스토리:', post.conversationHistory);
-    
-    // 사용자 메시지를 댓글로 추가
-    await addComment(post.id, userMessage, post.comments);
-    
-    // 대화 히스토리 가져오기
-    const history = post.conversationHistory || [];
-    
-    console.log('📍 히스토리 길이:', history.length, '현재 턴:', Math.floor(history.length / 2) + 1);
-    
-    // AI 응답 생성
-    setTimeout(async () => {
-      const aiResponse = await generateDeepConversation(userMessage, history);
-      
-      console.log('🤖 AI 응답:', aiResponse);
-      
-      if (aiResponse.success) {
-        // AI 응답을 댓글로 추가
-        const refreshedPosts = await getPosts();
-        const currentPost = refreshedPosts.posts.find(p => p.id === post.id);
-        
-        if (currentPost) {
-          await addComment(post.id, aiResponse.message, currentPost.comments);
-          
-          // 대화 히스토리 업데이트
-          const finalHistory = [
-            ...history,
-            { role: 'user', content: userMessage },
-            { role: 'assistant', content: aiResponse.message }
-          ];
-          
-          console.log('💾 저장할 히스토리:', finalHistory);
-          
-          await updateConversationHistory(post.id, finalHistory);
-          
-          await loadPosts();
-          
-          // 선택된 글 새로고침
-          if (selectedPost && selectedPost.id === post.id) {
-            const updatedPosts = await getPosts();
-            const updatedPost = updatedPosts.posts.find(p => p.id === post.id);
-            if (updatedPost) {
-              setSelectedPost(updatedPost);
-              console.log('✅ 글 새로고침 완료:', updatedPost.conversationHistory);
-            }
-          }
-        }
-      }
-    }, getRandomDelay());
-  };
-
   const sortedPosts = [...posts].sort((a, b) => {
     if (sortBy === '최신순') {
       return 0;
@@ -503,42 +414,20 @@ const App = () => {
             </div>
             
             <div className="space-y-3">
-              {/* 3턴 대화 중이면 대화 계속하기 UI */}
-              {post.conversationHistory && post.conversationHistory.length > 0 && post.conversationHistory.length < 6 ? (
-                <>
-                  <label className="block text-sm font-bold text-purple-800">💬 대화 계속하기</label>
-                  <textarea
-                    value={conversationInput}
-                    onChange={(e) => setConversationInput(e.target.value)}
-                    placeholder="더 말하고 싶은 게 있어?"
-                    className="w-full p-4 border-2 border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-purple-50"
-                    rows="3"
-                  />
-                  <button
-                    onClick={() => handleContinueConversation(post)}
-                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
-                  >
-                    계속 이야기하기
-                  </button>
-                </>
-              ) : (
-                <>
-                  <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
-                  <textarea
-                    value={localComment}
-                    onChange={(e) => setLocalComment(e.target.value)}
-                    placeholder="당신의 울림을 남겨주세요..."
-                    className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
-                    rows="3"
-                  />
-                  <button
-                    onClick={handleSubmitComment}
-                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
-                  >
-                    울림 보내기
-                  </button>
-                </>
-              )}
+              <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
+              <textarea
+                value={localComment}
+                onChange={(e) => setLocalComment(e.target.value)}
+                placeholder="당신의 울림을 남겨주세요..."
+                className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
+                rows="3"
+              />
+              <button
+                onClick={handleSubmitComment}
+                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
+              >
+                울림 보내기
+              </button>
             </div>
           </div>
         </div>
