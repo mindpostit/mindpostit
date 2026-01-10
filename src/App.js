@@ -26,9 +26,9 @@ const App = () => {
 
   // 공감 메시지 목록
   const echoMessageOptions = [
-    "공감해",
-    "글쎄..",
-    "그냥 들었어"
+    "공감",
+    "비공감",
+    "중립"
   ];
 
   useEffect(() => {
@@ -145,7 +145,7 @@ const App = () => {
       
       setTimeout(() => setView('feed'), 500);
       
-      // 타로 요청이면 AI 타로 생성
+      // 타로 체크 시: AI 타로
       if (needsTarot) {
         setTimeout(async () => {
           const tarotReading = await generateTarotReading(postContent);
@@ -161,8 +161,8 @@ const App = () => {
           }
         }, getRandomDelay());
       } 
-      // 일반 AI 댓글
-      else if (listenWithComments) {
+      // 타로 체크 안 함: 기본 AI 공감
+      else {
         setTimeout(async () => {
           const aiResponse = await generateAIResponse(postContent);
           if (aiResponse.success && result.id) {
@@ -392,7 +392,7 @@ const App = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
-              메인화면 가기
+              돌아가기
             </button>
           </div>
           
@@ -468,7 +468,7 @@ const App = () => {
               <textarea
                 value={localComment}
                 onChange={(e) => setLocalComment(e.target.value)}
-                placeholder="너의 울림을 남겨줘."
+                placeholder="당신의 울림을 남겨주세요..."
                 className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
                 rows="3"
               />
@@ -502,7 +502,7 @@ const App = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-black text-gray-900 mb-4 text-center">
-              느낌을 남겨줘 💜
+              공감을 남겨주세요 💜
             </h3>
             <div className="space-y-2">
               {echoMessageOptions.map((message) => (
@@ -728,29 +728,16 @@ const App = () => {
               />
               
               <div className="space-y-3 mb-5">
-                <label className="flex items-start gap-3 p-4 bg-white/60 border-2 border-blue-300 rounded-xl cursor-pointer hover:bg-white/80 transition-all">
-                  <input
-                    type="checkbox"
-                    checked={listenWithComments}
-                    onChange={(e) => setListenWithComments(e.target.checked)}
-                    className="mt-1 w-5 h-5 text-blue-500 rounded"
-                  />
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-900 mb-1">울림으로 듣기</div>
-                    <div className="text-sm text-gray-700">메아리 대화</div>
-                  </div>
-                </label>
-                
-                <label className="flex items-start gap-3 p-4 bg-white/60 border-2 border-amber-300 rounded-xl cursor-pointer hover:bg-white/80 transition-all">
+                <label className="flex items-start gap-3 p-4 bg-white/60 border-2 border-purple-300 rounded-xl cursor-pointer hover:bg-white/80 transition-all">
                   <input
                     type="checkbox"
                     checked={wantDeeper}
                     onChange={(e) => setWantDeeper(e.target.checked)}
-                    className="mt-1 w-5 h-5 text-amber-500 rounded"
+                    className="mt-1 w-5 h-5 text-purple-500 rounded"
                   />
                   <div className="flex-1">
-                    <div className="font-bold text-gray-900 mb-1">🔮 무료 타로 상담 받기</div>
-                    <div className="text-sm text-gray-700">실제 사람이 타로 봐줌 (선착순 5명)</div>
+                    <div className="font-bold text-gray-900 mb-1">🔮 타로 봐줘</div>
+                    <div className="text-sm text-gray-700">깊게 들어줄게 (AI 타로)</div>
                   </div>
                 </label>
               </div>
@@ -765,7 +752,6 @@ const App = () => {
               <div className="text-center mt-3 space-y-1">
                 <p className="text-xs md:text-sm text-gray-600 font-medium">아무도 몰라. 완전 익명.</p>
                 <p className="text-xs text-amber-600 font-bold">⏰ 내일 자정에 흔적 없이 사라짐</p>
-                <p className="text-xs text-purple-600 font-bold">🔮 타로 신청하면 바로 답변</p>
               </div>
             </div>
           </div>
