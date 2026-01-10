@@ -43,53 +43,16 @@ export const generateDeepConversation = async (userMessage, conversationHistory 
       };
     }
     
-    // 간단 명확한 프롬프트
-    let systemPrompt = '';
-    
-    if (currentTurn === 1) {
-      systemPrompt = `너는 친구야. 반말로 짧게 공감해줘.
-"많이 힘들었구나. 무슨 일이야?" 이런 식으로.
-2-3문장으로 짧게. 부드럽게 물어봐.`;
-    } else if (currentTurn === 2) {
-      systemPrompt = `너는 친구야. 반말로 짧게 공감해줘.
-한 번만 더 물어봐. 2-3문장으로 짧게.`;
-    } else {
-      systemPrompt = `너는 친구야. 반말로 짧게 공감하고 마무리해줘.
-질문하지 말고 위로로 끝내. 2-3문장으로 짧게.`;
-    }
-    
-    // API 메시지 구성
-    const messages = [];
-    
-    // 대화 히스토리를 messages 배열로 구성
-    conversationHistory.forEach(msg => {
-      messages.push({
-        role: msg.role,
-        content: msg.content
-      });
-    });
-    
-    // 현재 사용자 메시지 추가
-    messages.push({
-      role: 'user',
-      content: userMessage
-    });
-    
-    console.log('📤 전송할 메시지:', messages);
-    
-    // Claude API 호출
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
+    // 백엔드 API 호출
+    const response = await fetch('/api/conversation', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.REACT_APP_ANTHROPIC_API_KEY || "",
-        "anthropic-version": "2023-06-01"
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 300,
-        system: systemPrompt,
-        messages: messages
+        userMessage,
+        conversationHistory,
+        currentTurn
       })
     });
 
@@ -100,16 +63,10 @@ export const generateDeepConversation = async (userMessage, conversationHistory 
     }
 
     const data = await response.json();
-    const aiMessage = data.content[0].text.trim();
     
-    console.log('✅ AI 응답:', { turn: currentTurn, message: aiMessage });
+    console.log('✅ AI 응답:', data);
     
-    return {
-      success: true,
-      message: aiMessage,
-      turn: currentTurn,
-      isLastTurn: currentTurn >= 3
-    };
+    return data;
     
   } catch (error) {
     console.error('❌ 3턴 대화 오류:', error);
