@@ -116,11 +116,11 @@ const App = () => {
   };
 
   const postitColors = [
-    'bg-yellow-100 border-yellow-200',
-    'bg-pink-100 border-pink-200',
-    'bg-blue-100 border-blue-200',
-    'bg-green-100 border-green-200',
-    'bg-purple-100 border-purple-200'
+  'bg-white border-gray-300',
+  'bg-white border-gray-300',
+  'bg-white border-gray-300',
+  'bg-white border-gray-300',
+  'bg-white border-gray-300'
   ];
 
   const handleSubmit = async () => {
