@@ -135,11 +135,10 @@ const App = () => {
     setShowRipple(true);
     setTimeout(() => setShowRipple(false), 2000);
     
-    const result = await createPost(content, wantDeeper, selectedTopic);
+    const result = await createPost(content, false, selectedTopic); // wantDeeper 항상 false
     
     if (result.success) {
       const postContent = content;
-      const needsDeepConversation = wantDeeper; // wantDeeper = 깊게 들어줘
       
       setContent('');
       setSelectedTopic(null);
@@ -150,8 +149,8 @@ const App = () => {
       
       setTimeout(() => setView('feed'), 500);
       
-      // 깊게 들어줘 체크: 3턴 대화 시작
-      if (needsDeepConversation && isTestActive()) {
+      // 무조건 3턴 AI 시작 (가교 역할)
+      if (isTestActive()) {
         setTimeout(async () => {
           const firstResponse = await generateDeepConversation(postContent, []);
           
@@ -170,21 +169,6 @@ const App = () => {
               ];
               await updateConversationHistory(result.id, history);
               
-              await loadPosts();
-            }
-          }
-        }, getRandomDelay());
-      } 
-      // 체크 안 함: 기본 AI 공감
-      else {
-        setTimeout(async () => {
-          const aiResponse = await generateAIResponse(postContent);
-          if (aiResponse.success && result.id) {
-            const posts = await getPosts();
-            const targetPost = posts.posts.find(p => p.id === result.id);
-            
-            if (targetPost) {
-              await addComment(result.id, aiResponse.message, targetPost.comments);
               await loadPosts();
             }
           }
@@ -256,25 +240,7 @@ const App = () => {
         });
       }
       
-      setTimeout(async () => {
-        const aiResponse = await generateAIResponse(
-          `원글: ${post.content}\n\n내 댓글: ${commentText}`
-        );
-        
-        if (aiResponse.success) {
-          const updatedPost = posts.find(p => p.id === postId);
-          await addComment(postId, aiResponse.message, [...updatedPost.comments, result.comment]);
-          await loadPosts();
-          
-          if (selectedPost && selectedPost.id === postId) {
-            const refreshedPosts = await getPosts();
-            const refreshedPost = refreshedPosts.posts.find(p => p.id === postId);
-            if (refreshedPost) {
-              setSelectedPost(refreshedPost);
-            }
-          }
-        }
-      }, getRandomDelay());
+      // AI 응답 제거 - 사람끼리만 대화
     }
   };
 
@@ -820,22 +786,6 @@ const App = () => {
                 rows="8"
               />
               
-              <div className="space-y-3 mb-5">
-                {isTestActive() ? (
-                  <label className="flex items-start gap-3 p-4 bg-white/60 border-2 border-purple-300 rounded-xl cursor-pointer hover:bg-white/80 transition-all">
-                    <input
-                      type="checkbox"
-                      checked={wantDeeper}
-                      onChange={(e) => setWantDeeper(e.target.checked)}
-                      className="mt-1 w-5 h-5 text-purple-500 rounded"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900 mb-1">💬 깊게 들어줘</div>
-                      <div className="text-sm text-gray-700">계속 이야기 들어줄게</div>
-                    </div>
-                  </label>
-                ) : null}
-              </div>
               
               <button
                 onClick={handleSubmit}
