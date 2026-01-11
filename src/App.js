@@ -92,8 +92,14 @@ const App = () => {
         
         if (todaysPosts.length > 0) {
           // 메아리가 가장 많은 글 선정
-          const sortedByEchoes = [...todaysPosts].sort((a, b) => (b.echoes || 0) - (a.echoes || 0));
-          const selectedPost = sortedByEchoes[0];
+          // 메아리가 가장 많은 값 찾기
+          const maxEchoes = Math.max(...todaysPosts.map(p => p.echoes || 0));
+          
+          // 같은 메아리 수를 가진 글들만 필터링
+          const topPosts = todaysPosts.filter(p => (p.echoes || 0) === maxEchoes);
+          
+          // 그 중에서 랜덤 선택
+          const selectedPost = topPosts[Math.floor(Math.random() * topPosts.length)];
           
           await setTodaysFeaturedPost(selectedPost.id);
           setFeaturedPostId(selectedPost.id);
