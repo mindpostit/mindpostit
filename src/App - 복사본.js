@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Shield, StickyNote } from 'lucide-react';
+import { MessageCircle, Shield } from 'lucide-react';
 import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
 import Admin from './Admin';
 
@@ -508,9 +508,9 @@ const App = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
-                <StickyNote className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
+                <EchoIcon count={5} />
                 <div className="absolute inset-0 animate-ping opacity-20">
-                  <StickyNote className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
+                  <EchoIcon count={5} />
                 </div>
               </div>
               <div 
@@ -520,7 +520,7 @@ const App = () => {
                 <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   마인드포스팃
                 </h1>
-                <p className="text-[10px] md:text-xs text-gray-600 font-medium">실시간 익명 감정 공유</p>
+                <p className="text-[10px] md:text-xs text-gray-600 font-medium">메아리가 되어 돌아오는 마음</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
