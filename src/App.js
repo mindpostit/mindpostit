@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Shield, StickyNote } from 'lucide-react';
 import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
 import Admin from './Admin';
+import { validateContent } from './contentFilter';
 
 const App = () => {
   const [view, setView] = useState('feed');
@@ -131,6 +132,13 @@ const App = () => {
   const handleSubmit = async () => {
     if (!content.trim()) return;
     
+    // 금칙어 검증
+    const validation = validateContent(content);
+    if (!validation.valid) {
+      alert(validation.message);
+      return;
+    }
+    
     setShowRipple(true);
     setTimeout(() => setShowRipple(false), 2000);
     
@@ -195,6 +203,13 @@ const App = () => {
 
   const handleAddComment = async (postId, commentText) => {
     if (!commentText.trim()) return;
+    
+    // 금칙어 검증
+    const validation = validateContent(commentText);
+    if (!validation.valid) {
+      alert(validation.message);
+      return;
+    }
     
     const post = posts.find(p => p.id === postId);
     
