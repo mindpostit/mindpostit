@@ -58,16 +58,15 @@ const FORBIDDEN_WORDS = [
 // 텍스트 정규화 함수 (띄어쓰기, 특수문자 제거)
 const normalizeText = (text) => {
   return text
-    .toLowerCase() // 소문자 변환
-    .replace(/[\s\-_.,!@#$%^&*()+=\[\]{};:'"|\\<>?\/~`]/g, '') // 띄어쓰기, 특수문자 제거
-    .replace(/[ㄱ-ㅎㅏ-ㅣ]/g, ''); // 자음/모음만 있는 경우 제거 (선택적)
+    .toLowerCase()
+    .replace(/[\s\-_.,!@#$%^&*()+=[\]{};:'"|\\<>?/~`]/g, '')
+    .replace(/[ㄱ-ㅎㅏ-ㅣ]/g, '');
 };
 
 // 금칙어 체크 함수
 export const checkForbiddenWords = (text) => {
   const normalized = normalizeText(text);
   
-  // 각 금칙어를 정규화해서 체크
   for (const word of FORBIDDEN_WORDS) {
     const normalizedWord = normalizeText(word);
     if (normalized.includes(normalizedWord)) {
@@ -86,33 +85,28 @@ export const checkForbiddenWords = (text) => {
 
 // 숫자 패턴 체크 (주민번호, 전화번호, 계좌번호)
 export const checkSensitivePatterns = (text) => {
-  // 주민번호 패턴 (000000-0000000)
   const ssnPattern = /\d{6}[-\s]?\d{7}/;
-  
-  // 전화번호 패턴 (010-0000-0000)
   const phonePattern = /01[0-9][-\s]?\d{4}[-\s]?\d{4}/;
-  
-  // 계좌번호 패턴 (10자리 이상 연속 숫자)
   const accountPattern = /\d{10,}/;
   
   if (ssnPattern.test(text)) {
     return {
       forbidden: true,
-      message: '주민등록번호는 입력할 수 없습니다'
+      message: '주민등록번호는 입력 불가'
     };
   }
   
   if (phonePattern.test(text)) {
     return {
       forbidden: true,
-      message: '전화번호는 입력할 수 없습니다'
+      message: '전화번호는 입력 불가'
     };
   }
   
   if (accountPattern.test(text)) {
     return {
       forbidden: true,
-      message: '계좌번호는 입력할 수 없습니다'
+      message: '계좌번호는 입력 불가'
     };
   }
   
@@ -123,7 +117,6 @@ export const checkSensitivePatterns = (text) => {
 
 // 통합 검사 함수
 export const validateContent = (text) => {
-  // 1. 금칙어 체크
   const wordCheck = checkForbiddenWords(text);
   if (wordCheck.forbidden) {
     return {
@@ -132,7 +125,6 @@ export const validateContent = (text) => {
     };
   }
   
-  // 2. 민감정보 패턴 체크
   const patternCheck = checkSensitivePatterns(text);
   if (patternCheck.forbidden) {
     return {
@@ -141,10 +133,7 @@ export const validateContent = (text) => {
     };
   }
   
-  // 통과!
   return {
     valid: true
   };
 };
-
-export default { validateContent, checkForbiddenWords, checkSensitivePatterns };
