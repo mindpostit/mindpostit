@@ -20,8 +20,6 @@ const App = () => {
   
   const [content, setContent] = useState('');
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [wantDeeper, setWantDeeper] = useState(false);
-  const [listenWithComments, setListenWithComments] = useState(true);
 
   // 공감 메시지 목록
   const echoMessageOptions = [
@@ -30,6 +28,7 @@ const App = () => {
     "모르겠음"
   ];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadPosts();
     loadTopics();
@@ -145,12 +144,8 @@ const App = () => {
     const result = await createPost(content, false, selectedTopic); // wantDeeper 항상 false
     
     if (result.success) {
-      const postContent = content;
-      
       setContent('');
       setSelectedTopic(null);
-      setWantDeeper(false);
-      setListenWithComments(true);
       
       await loadPosts();
       
