@@ -33,7 +33,7 @@ const App = () => {
     loadPosts();
     loadTopics();
     loadAndSelectFeaturedPost();
-  }, [loadPosts]);
+  }, []);
 
   const loadPosts = async () => {
     setLoading(true);
