@@ -3,8 +3,10 @@ import { MessageCircle, Shield, StickyNote } from 'lucide-react';
 import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
 import Admin from './Admin';
 import { validateContent } from './contentFilter';
+import Terms from './Terms';
 
 const App = () => {
+  const [showTerms, setShowTerms] = useState(false);
   const [view, setView] = useState('feed');
   const [showAdmin, setShowAdmin] = useState(false);
   const [sortBy, setSortBy] = useState('최신순');
@@ -721,6 +723,22 @@ const App = () => {
           </div>
         )}
       </main>
+      
+      {/* Footer */}
+      <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200 py-4 mt-12">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <button
+            onClick={() => setShowTerms(true)}
+            className="text-sm text-gray-600 hover:text-amber-600 transition-colors underline"
+          >
+            이용약관
+          </button>
+          <p className="text-xs text-gray-500 mt-2">© 2025 마인드포스팃. 24시간 후 사라지는 익명 감정 공유</p>
+        </div>
+      </footer>
+
+      {/* Terms Modal */}
+      {showTerms && <Terms onClose={() => setShowTerms(false)} />}
 
       <style>{`
         @keyframes ripple-out {
