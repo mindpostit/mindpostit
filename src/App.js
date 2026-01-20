@@ -129,14 +129,27 @@ const App = () => {
   ];
 
   const handleSubmit = async () => {
-    if (!content.trim()) return;
-    
-    // 금칙어 검증
-    const validation = validateContent(content);
-    if (!validation.valid) {
-      alert(validation.message);
+  if (!content.trim()) return;
+  
+  // ✅ 여기에 Rate Limiting 추가
+  const lastPostTime = localStorage.getItem('lastPostTime');
+  const now = Date.now();
+  const oneMinute = 60 * 1000;
+  
+  if (lastPostTime) {
+    const timeSinceLastPost = now - parseInt(lastPostTime);
+    if (timeSinceLastPost < oneMinute) {
+      alert('너무 빨라! 1분에 한 번만 쓸 수 있어.');
       return;
     }
+  }
+  
+  // 금칙어 검증
+  const validation = validateContent(content);
+  if (!validation.valid) {
+    alert(validation.message);
+    return;
+  }
     
     setShowRipple(true);
     setTimeout(() => setShowRipple(false), 2000);
@@ -144,15 +157,14 @@ const App = () => {
     const result = await createPost(content, false, selectedTopic); // wantDeeper 항상 false
     
     if (result.success) {
-      setContent('');
-      setSelectedTopic(null);
-      
-      await loadPosts();
-      
-      setTimeout(() => setView('feed'), 500);
-      
-      // AI 제거 - 사람끼리만 소통
-    } else {
+    // ✅ 여기에 시간 저장 추가
+    localStorage.setItem('lastPostTime', now.toString());
+    
+    setContent('');
+    setSelectedTopic(null);
+    await loadPosts();
+    setTimeout(() => setView('feed'), 500);
+  } else {
       alert('글 작성에 실패했습니다. 다시 시도해주세요.');
     }
   };
