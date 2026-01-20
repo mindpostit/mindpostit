@@ -448,7 +448,7 @@ const App = () => {
               <textarea
                 value={localComment}
                 onChange={(e) => setLocalComment(e.target.value)}
-                placeholder="당신의 울림을 남겨주세요..."
+                placeholder="너의 울림을 남겨줘"
                 className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
                 rows="3"
               />
@@ -482,7 +482,7 @@ const App = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-black text-gray-900 mb-4 text-center">
-              공감을 남겨주세요 💜
+              공감을 남겨줘 💜
             </h3>
             <div className="space-y-2">
               {echoMessageOptions.map((message) => (
@@ -544,7 +544,7 @@ const App = () => {
                 <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   마인드포스팃
                 </h1>
-                <p className="text-[10px] md:text-xs text-gray-600 font-medium">실시간 익명 감정 공유</p>
+                <p className="text-[10px] md:text-xs text-gray-600 font-medium">오늘 다 뱉음, 내일은 가벼움</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -723,7 +723,7 @@ const App = () => {
           </div>
         )}
       </main>
-      
+
       {/* Footer */}
       <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200 py-4 mt-12">
         <div className="max-w-6xl mx-auto px-4 text-center">
@@ -733,7 +733,7 @@ const App = () => {
           >
             이용약관
           </button>
-          <p className="text-xs text-gray-500 mt-2">© 2025 마인드포스팃. 24시간 후 사라지는 익명 감정 공유</p>
+          <p className="text-xs text-gray-500 mt-2">© 2026 마인드포스팃. 24시간 후 사라지는 익명 감정 공유</p>
         </div>
       </footer>
 
