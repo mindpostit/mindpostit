@@ -59,16 +59,6 @@ const App = () => {
         ...post,
         timeAgo: getTimeAgo(post.createdAt)
       })));
-      
-      // ✅ Featured post 자동 선정 (글이 있을 때만)
-      if (filteredPosts.length > 0 && !featuredPostId) {
-        const maxEchoes = Math.max(...filteredPosts.map(p => p.echoes || 0));
-        const topPosts = filteredPosts.filter(p => (p.echoes || 0) === maxEchoes);
-        const selectedPost = topPosts[Math.floor(Math.random() * topPosts.length)];
-        
-        await setTodaysFeaturedPost(selectedPost.id);
-        setFeaturedPostId(selectedPost.id);
-      }
     }
     setLoading(false);
   };
@@ -269,179 +259,204 @@ const App = () => {
           <circle cx="12" cy="12" r="3" fill="currentColor"/>
         </svg>
       );
+    } else if (count <= 3) {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+          <circle cx="12" cy="12" r="7" opacity="0.5"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
+    } else if (count <= 10) {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+          <circle cx="12" cy="12" r="10" opacity="0.3"/>
+          <circle cx="12" cy="12" r="7" opacity="0.5"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
+    } else {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`${className} animate-pulse`}>
+          <circle cx="12" cy="12" r="10" opacity="0.3"/>
+          <circle cx="12" cy="12" r="7" opacity="0.5"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      );
     }
-    
-    const waves = Math.min(Math.floor(count / 5) + 1, 3);
+  };
+
+  const PostCard = ({ post, onClick, index, isFeatured = false }) => {
+    const colorClass = isFeatured 
+      ? 'bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 border-amber-400' 
+      : postitColors[index % postitColors.length];
     
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-        <circle cx="12" cy="12" r="3" fill="currentColor"/>
-        {waves >= 1 && (
-          <circle cx="12" cy="12" r="6" opacity="0.6"/>
-        )}
-        {waves >= 2 && (
-          <circle cx="12" cy="12" r="9" opacity="0.3"/>
-        )}
-        {waves >= 3 && (
-          <circle cx="12" cy="12" r="11" opacity="0.15"/>
-        )}
-      </svg>
+      <div 
+        onClick={onClick}
+        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-2 relative group ${isFeatured ? 'ring-4 ring-amber-400 ring-opacity-50' : ''}`}
+        style={{
+          boxShadow: isFeatured ? '8px 8px 20px rgba(251, 191, 36, 0.3)' : '4px 4px 8px rgba(0,0,0,0.1)',
+        }}
+      >
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-white/40 rounded-sm" 
+             style={{boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}/>
+        
+        <div className="relative z-10">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-800">{post.author}</span>
+              <span className="text-xs text-gray-500">•</span>
+              <span className="text-xs text-gray-500">{post.timeAgo}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {post.topic && (
+                <div className="flex items-center gap-1 text-xs text-blue-700 bg-white/60 px-2 py-0.5 rounded-full border border-blue-300">
+                  <span>💭 {post.topic}</span>
+                </div>
+              )}
+              {post.wantDeeper && (
+                <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
+                  <span>🔮 깊게 들어줘</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <p className="text-gray-900 mb-4 line-clamp-3 font-medium leading-relaxed">{post.content}</p>
+          
+          <div className="flex items-center gap-4 text-sm text-gray-700">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEchoClick(post);
+              }}
+              className="flex items-center gap-1.5 hover:text-purple-600 transition-colors group/echo"
+            >
+              <div className="relative">
+                <EchoIcon count={post.echoes} />
+                <div className="absolute inset-0 scale-0 group-hover/echo:scale-150 opacity-0 group-hover/echo:opacity-30 transition-all duration-500">
+                  <EchoIcon count={post.echoes} />
+                </div>
+              </div>
+              <span className="font-bold">{post.echoes}번의 메아리</span>
+            </button>
+            
+            <div className="flex items-center gap-1.5">
+              <MessageCircle size={18} />
+              <span className="font-bold">{post.comments?.length || 0}개의 울림</span>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
-  const PostCard = ({ post, index, onClick, isFeatured = false }) => (
-    <div
-      onClick={onClick}
-      className={`${postitColors[index % postitColors.length]} 
-        ${isFeatured ? 'border-4 border-amber-400' : 'border-2'}
-        rounded-lg p-4 md:p-6 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1
-        relative overflow-hidden min-h-[180px] md:min-h-[220px]`}
-      style={{
-        boxShadow: isFeatured 
-          ? '0 8px 24px rgba(251, 191, 36, 0.3)' 
-          : '4px 4px 8px rgba(0,0,0,0.1)'
-      }}
-    >
-      {isFeatured && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400"></div>
-      )}
-      
-      <div className="relative z-10">
-        {post.topic && (
-          <span className="inline-block px-3 py-1 mb-3 text-xs font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-            {post.topic}
-          </span>
-        )}
-        
-        <p className="text-gray-900 mb-4 font-medium break-words whitespace-pre-wrap line-clamp-6">
-          {post.content}
-        </p>
-        
-        <div className="flex items-center justify-between text-xs text-gray-600 pt-3 border-t border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span className="text-amber-600 font-semibold text-sm">
-                <EchoIcon count={post.echoes || 0} className="inline text-amber-600" />
-              </span>
-              <span className="font-semibold text-gray-700">
-                {post.echoes || 0}번의 메아리
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MessageCircle size={14} className="text-gray-500" />
-              <span>{post.comments?.length || 0}개의 울림</span>
-            </div>
-          </div>
-          <span className="text-xs text-gray-500">{post.timeAgo}</span>
-        </div>
-      </div>
-    </div>
-  );
-
   const PostDetail = ({ post, onClose }) => {
-    const [commentText, setCommentText] = useState('');
+    const [localComment, setLocalComment] = useState('');
+    
+    const handleSubmitComment = () => {
+      if (localComment.trim()) {
+        handleAddComment(post.id, localComment);
+        setLocalComment('');
+      }
+    };
     
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in"
-           onClick={onClose}>
-        <div className="bg-yellow-50 border-4 border-yellow-300 rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
-             onClick={(e) => e.stopPropagation()}
-             style={{boxShadow: '12px 12px 24px rgba(0,0,0,0.2)'}}>
-          
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-2xl font-bold"
-          >
-            ×
-          </button>
-          
-          {post.topic && (
-            <span className="inline-block px-4 py-2 mb-4 text-sm font-bold rounded-full bg-amber-100 text-amber-700 border-2 border-amber-300">
-              {post.topic}
-            </span>
-          )}
-          
-          <p className="text-gray-900 text-lg mb-6 font-medium whitespace-pre-wrap break-words">
-            {post.content}
-          </p>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-600 mb-6 pb-6 border-b-2 border-yellow-300">
-            <div className="flex items-center gap-2">
-              <EchoIcon count={post.echoes || 0} className="text-amber-600" />
-              <span className="font-semibold">{post.echoes || 0}번의 메아리</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MessageCircle size={16} className="text-gray-500" />
-              <span>{post.comments?.length || 0}개의 울림</span>
-            </div>
-            <span className="ml-auto text-gray-500">{post.timeAgo}</span>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-amber-600">
-                <EchoIcon count={post.echoes || 0} />
-              </span>
-              메아리 보내기
-            </h3>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {echoMessageOptions.map(message => {
-                const count = post.echoMessages?.[message] || 0;
-                return (
-                  <button
-                    key={message}
-                    onClick={() => handleEchoWithMessage(message)}
-                    className="px-4 py-2 rounded-full font-medium transition-all border-2 border-amber-300 bg-white hover:bg-amber-50 hover:border-amber-400 hover:shadow-md"
-                  >
-                    {message} {count > 0 && <span className="text-amber-600 font-bold">({count})</span>}
-                  </button>
-                );
-              })}
-            </div>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6 z-10">
+            <button 
+              onClick={onClose}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-base font-medium bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              돌아가기
+            </button>
           </div>
           
-          <div className="mb-6">
-            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <MessageCircle size={20} className="text-gray-700" />
-              울림 ({post.comments?.length || 0})
-            </h3>
-            <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-              {post.comments?.map((comment) => (
-                <div key={comment.id} className="bg-white/60 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-900 text-sm mb-1 whitespace-pre-wrap break-words">{comment.text}</p>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span className="font-medium">{comment.isAnonymous ? '익명' : '들림이'}</span>
-                    <span>{getTimeAgo(comment.timestamp)}</span>
+          <div className="p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm font-bold text-gray-800">{post.author}</span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-gray-400">{post.timeAgo}</span>
+              {post.topic && (
+                <div className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-full ml-2 border border-blue-200">
+                  <span>💭 {post.topic}</span>
+                </div>
+              )}
+              {post.wantDeeper && (
+                <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
+                  <span>🔮 깊게 들어줘</span>
+                </div>
+              )}
+            </div>
+            
+            <p className="text-gray-900 mb-6 whitespace-pre-wrap leading-relaxed font-medium">{post.content}</p>
+            
+            <div className="mb-6 pb-6 border-b">
+              <button 
+                onClick={() => handleEchoClick(post)}
+                className="flex items-center gap-1.5 hover:text-purple-600 transition-colors mb-3"
+              >
+                <EchoIcon count={post.echoes} />
+                <span className="font-bold text-sm text-gray-700">{post.echoes}번의 메아리</span>
+              </button>
+              
+              {/* 공감 메시지 상세 표시 */}
+              {post.echoMessages && Object.keys(post.echoMessages).length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {Object.entries(post.echoMessages)
+                    .sort((a, b) => b[1] - a[1]) // 많은 순으로 정렬
+                    .map(([msg, count]) => (
+                      <div key={msg} className="flex items-center justify-between bg-purple-50 rounded-lg px-4 py-2 border border-purple-200">
+                        <span className="text-sm font-bold text-gray-800">{msg}</span>
+                        <span className="text-xs bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-bold">
+                          {count}명
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <MessageCircle size={16} className="text-purple-600" />
+                울림 {post.comments?.length || 0}개
+              </h3>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              {(post.comments || []).map((comment, idx) => (
+                <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold text-gray-800">{comment.author}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-xs text-gray-400">
+                      {comment.time || getTimeAgo(comment.createdAt)}
+                    </span>
                   </div>
+                  <p className="text-gray-800 text-sm leading-relaxed">{comment.content}</p>
                 </div>
               ))}
             </div>
             
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && commentText.trim()) {
-                    handleAddComment(post.id, commentText);
-                    setCommentText('');
-                  }
-                }}
-                placeholder="울림을 남겨봐 (익명)"
-                className="flex-1 px-4 py-2 border-2 border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-yellow-50"
+            <div className="space-y-3">
+              <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
+              <textarea
+                value={localComment}
+                onChange={(e) => setLocalComment(e.target.value)}
+                placeholder="너의 울림을 남겨줘"
+                className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
+                rows="3"
               />
               <button
-                onClick={() => {
-                  if (commentText.trim()) {
-                    handleAddComment(post.id, commentText);
-                    setCommentText('');
-                  }
-                }}
-                disabled={!commentText.trim()}
-                className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed font-bold transition-all"
+                onClick={handleSubmitComment}
+                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
               >
-                보내기
+                울림 보내기
               </button>
             </div>
           </div>
@@ -450,95 +465,98 @@ const App = () => {
     );
   };
 
-  const EchoModal = ({ isOpen, onClose, onSelectMessage, post }) => {
-    if (!isOpen || !post) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-           onClick={onClose}>
-        <div className="bg-white rounded-2xl p-6 max-w-md w-full"
-             onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-xl font-bold mb-4 text-gray-900">메아리 보내기</h3>
-          <p className="text-sm text-gray-600 mb-6">이 마음에 공감하시나요?</p>
-          
-          <div className="space-y-3">
-            {echoMessageOptions.map(message => {
-              const count = post.echoMessages?.[message] || 0;
-              return (
-                <button
-                  key={message}
-                  onClick={() => onSelectMessage(message)}
-                  className="w-full px-4 py-3 rounded-lg font-medium transition-all border-2 border-gray-200 bg-white hover:bg-amber-50 hover:border-amber-400 text-left flex justify-between items-center"
-                >
-                  <span>{message}</span>
-                  {count > 0 && <span className="text-amber-600 font-bold">({count})</span>}
-                </button>
-              );
-            })}
-          </div>
-          
-          <button
-            onClick={onClose}
-            className="w-full mt-4 px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
-          >
-            취소
-          </button>
-        </div>
-      </div>
-    );
-  };
+  if (showAdmin) {
+    return <Admin onBack={() => setShowAdmin(false)} />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-200 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute top-40 right-20 w-48 h-48 bg-amber-200 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-20 left-1/3 w-40 h-40 bg-orange-200 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '2s'}}></div>
+    <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* 공감 메시지 선택 모달 */}
+      {showEchoModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEchoModal(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-black text-gray-900 mb-4 text-center">
+              공감을 남겨줘 💜
+            </h3>
+            <div className="space-y-2">
+              {echoMessageOptions.map((message) => (
+                <button
+                  key={message}
+                  onClick={() => handleEchoWithMessage(message)}
+                  className="w-full bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 text-gray-900 py-3 rounded-xl transition-all font-bold border-2 border-purple-200 hover:border-purple-400 hover:scale-105"
+                >
+                  {message}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowEchoModal(false)}
+              className="w-full mt-4 text-gray-600 hover:text-gray-800 text-sm font-medium"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="fixed inset-0 pointer-events-none opacity-20">
+        <svg className="absolute top-20 left-10 w-64 h-64 animate-pulse-slow">
+          <circle cx="128" cy="128" r="100" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="70" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="40" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+        </svg>
+        <svg className="absolute bottom-20 right-10 w-96 h-96 animate-pulse-slow" style={{animationDelay: '1s'}}>
+          <circle cx="192" cy="192" r="150" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="110" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="70" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+        </svg>
       </div>
 
-      {showAdmin && <Admin onClose={() => setShowAdmin(false)} />}
-      
-      <EchoModal 
-        isOpen={showEchoModal}
-        onClose={() => {
-          setShowEchoModal(false);
-          setEchoingPost(null);
-        }}
-        onSelectMessage={handleEchoWithMessage}
-        post={echoingPost}
-      />
+      {showRipple && (
+        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+          <div className="relative w-96 h-96">
+            <div className="absolute inset-0 rounded-full bg-yellow-400 opacity-30 animate-ripple-out"/>
+            <div className="absolute inset-0 rounded-full bg-orange-400 opacity-20 animate-ripple-out" style={{animationDelay: '0.3s'}}/>
+            <div className="absolute inset-0 rounded-full bg-amber-400 opacity-10 animate-ripple-out" style={{animationDelay: '0.6s'}}/>
+          </div>
+        </div>
+      )}
 
-      <header className="bg-white/80 backdrop-blur-sm border-b-4 border-amber-300 sticky top-0 z-40 shadow-md">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <header className={`bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 border-yellow-200 transition-all ${selectedPost ? 'hidden' : ''}`}>
+        <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
-            <div 
-              className="flex items-center gap-3 cursor-pointer group"
-              onClick={() => setView('feed')}
-            >
-              <div className="bg-gradient-to-br from-amber-400 to-orange-400 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105">
-                <StickyNote className="text-white" size={28} />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="relative">
+                <StickyNote className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
+                <div className="absolute inset-0 animate-ping opacity-20">
+                  <StickyNote className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">
+              <div 
+                className="cursor-pointer"
+                onClick={() => setView('feed')}
+              >
+                <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   마인드포스팃
                 </h1>
-                <p className="text-xs md:text-sm text-gray-600 font-medium">오늘 다 뱉음, 내일은 가벼움</p>
+                <p className="text-[10px] md:text-xs text-gray-600 font-medium">오늘 다 뱉음, 내일은 가벼움</p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setView('write')}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-full hover:from-amber-600 hover:to-orange-600 transition-all font-black text-sm md:text-base shadow-md hover:shadow-lg flex items-center gap-2"
+                onClick={() => setView(view === 'feed' ? 'write' : 'feed')}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:from-amber-600 hover:to-orange-600 transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
               >
-                <StickyNote size={18} />
-                <span className="hidden md:inline">마음 남기기</span>
-                <span className="md:hidden">글쓰기</span>
+                {view === 'feed' ? '📝 마음 남기기' : '📋 메아리 보기'}
               </button>
-              
               <button
                 onClick={() => setShowAdmin(true)}
-                className="p-2 md:p-3 rounded-full bg-white/80 hover:bg-gray-100 transition-all border-2 border-gray-200 hover:border-gray-300"
+                className="p-2 text-gray-600 hover:text-amber-600 transition-all"
                 title="관리자"
               >
                 <Shield size={20} />
