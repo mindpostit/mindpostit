@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Shield, StickyNote } from 'lucide-react';
 import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
+import { analytics } from './firebase';
+import { logEvent } from 'firebase/analytics';
 import Admin from './Admin';
 import { validateContent } from './contentFilter';
 import Terms from './Terms';
@@ -123,11 +125,11 @@ const App = () => {
   };
 
   const postitColors = [
-    'bg-stone-50 border-stone-200',
-    'bg-stone-50 border-stone-200',
-    'bg-stone-50 border-stone-200',
-    'bg-stone-50 border-stone-200',
-    'bg-stone-50 border-stone-200'
+    'border-2',
+    'border-2',
+    'border-2',
+    'border-2',
+    'border-2'
   ];
 
   const handleSubmit = async () => {
@@ -160,6 +162,7 @@ const App = () => {
     
     if (result.success) {
     // ✅ 여기에 시간 저장 추가
+    // logEvent(analytics, 'post_created', { has_topic: selectedTopic ? true : false });
     localStorage.setItem('lastPostTime', now.toString());
     
     setContent('');
@@ -178,7 +181,7 @@ const App = () => {
 
   const handleEchoWithMessage = async (message) => {
     if (!echoingPost) return;
-    
+    logEvent(analytics, 'echo_added', { echo_type: message });
     const result = await addEchoWithMessage(
       echoingPost.id, 
       message, 
@@ -287,16 +290,26 @@ const App = () => {
 
   const PostCard = ({ post, onClick, index, isFeatured = false }) => {
     const colorClass = isFeatured 
-      ? 'bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 border-amber-400' 
+      ? 'border-4' 
       : postitColors[index % postitColors.length];
+    
+    const cardStyle = isFeatured 
+      ? {
+          background: 'linear-gradient(135deg, #FBF8F3 0%, #F5F1E8 100%)',
+          borderColor: '#D4A574',
+          boxShadow: '8px 8px 20px rgba(212, 165, 116, 0.3)',
+        }
+      : {
+          background: '#FBF8F3',
+          borderColor: '#E8E0D5',
+          boxShadow: '4px 4px 8px rgba(0,0,0,0.08)',
+        };
     
     return (
       <div 
         onClick={onClick}
-        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-2 relative group ${isFeatured ? 'ring-4 ring-amber-400 ring-opacity-50' : ''}`}
-        style={{
-          boxShadow: isFeatured ? '8px 8px 20px rgba(251, 191, 36, 0.3)' : '4px 4px 8px rgba(0,0,0,0.1)',
-        }}
+        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer relative group`}
+        style={cardStyle}
       >
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-white/40 rounded-sm" 
              style={{boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}/>
@@ -470,7 +483,9 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: 'radial-gradient(ellipse 800px 600px at 50% 0%, #F5F1E8 0%, #E8E0D5 40%, #D9CFC0 100%)'
+    }}>
       {/* 공감 메시지 선택 모달 */}
       {showEchoModal && (
         <div 
@@ -478,18 +493,38 @@ const App = () => {
           onClick={() => setShowEchoModal(false)}
         >
           <div 
-            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            className="rounded-2xl p-6 max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FBF8F3',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            }}
           >
-            <h3 className="text-xl font-black text-gray-900 mb-4 text-center">
-              공감을 남겨줘 💜
+            <h3 className="text-xl font-black mb-4 text-center" style={{color: '#4A3F35'}}>
+              공감을 남겨줘 💛
             </h3>
             <div className="space-y-2">
               {echoMessageOptions.map((message) => (
                 <button
                   key={message}
                   onClick={() => handleEchoWithMessage(message)}
-                  className="w-full bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 text-gray-900 py-3 rounded-xl transition-all font-bold border-2 border-purple-200 hover:border-purple-400 hover:scale-105"
+                  className="w-full py-3 rounded-xl transition-all font-bold"
+                  style={{
+                    background: '#F5F1E8',
+                    color: '#4A3F35',
+                    border: '2px solid #E8E0D5',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#E8E0D5';
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(212,165,116,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#F5F1E8';
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                  }}
                 >
                   {message}
                 </button>
@@ -497,66 +532,76 @@ const App = () => {
             </div>
             <button
               onClick={() => setShowEchoModal(false)}
-              className="w-full mt-4 text-gray-600 hover:text-gray-800 text-sm font-medium"
+              className="w-full mt-4 text-sm font-medium"
+              style={{color: '#8B7355'}}
             >
               취소
             </button>
           </div>
         </div>
       )}
-      <div className="fixed inset-0 pointer-events-none opacity-20">
+      <div className="fixed inset-0 pointer-events-none opacity-10">
         <svg className="absolute top-20 left-10 w-64 h-64 animate-pulse-slow">
-          <circle cx="128" cy="128" r="100" fill="none" stroke="#f59e0b" strokeWidth="1"/>
-          <circle cx="128" cy="128" r="70" fill="none" stroke="#f59e0b" strokeWidth="1"/>
-          <circle cx="128" cy="128" r="40" fill="none" stroke="#f59e0b" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="100" fill="none" stroke="#D4A574" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="70" fill="none" stroke="#D4A574" strokeWidth="1"/>
+          <circle cx="128" cy="128" r="40" fill="none" stroke="#D4A574" strokeWidth="1"/>
         </svg>
         <svg className="absolute bottom-20 right-10 w-96 h-96 animate-pulse-slow" style={{animationDelay: '1s'}}>
-          <circle cx="192" cy="192" r="150" fill="none" stroke="#fbbf24" strokeWidth="1"/>
-          <circle cx="192" cy="192" r="110" fill="none" stroke="#fbbf24" strokeWidth="1"/>
-          <circle cx="192" cy="192" r="70" fill="none" stroke="#fbbf24" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="150" fill="none" stroke="#C9A875" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="110" fill="none" stroke="#C9A875" strokeWidth="1"/>
+          <circle cx="192" cy="192" r="70" fill="none" stroke="#C9A875" strokeWidth="1"/>
         </svg>
       </div>
 
       {showRipple && (
         <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
           <div className="relative w-96 h-96">
-            <div className="absolute inset-0 rounded-full bg-yellow-400 opacity-30 animate-ripple-out"/>
-            <div className="absolute inset-0 rounded-full bg-orange-400 opacity-20 animate-ripple-out" style={{animationDelay: '0.3s'}}/>
-            <div className="absolute inset-0 rounded-full bg-amber-400 opacity-10 animate-ripple-out" style={{animationDelay: '0.6s'}}/>
+            <div className="absolute inset-0 rounded-full opacity-30 animate-ripple-out" style={{backgroundColor: '#D4A574'}}/>
+            <div className="absolute inset-0 rounded-full opacity-20 animate-ripple-out" style={{backgroundColor: '#C9A875', animationDelay: '0.3s'}}/>
+            <div className="absolute inset-0 rounded-full opacity-10 animate-ripple-out" style={{backgroundColor: '#BEA070', animationDelay: '0.6s'}}/>
           </div>
         </div>
       )}
 
-      <header className={`bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 border-yellow-200 transition-all ${selectedPost ? 'hidden' : ''}`}>
+      <header className={`bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 transition-all ${selectedPost ? 'hidden' : ''}`} style={{borderColor: '#E8E0D5'}}>
         <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
-                <StickyNote className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
+                <StickyNote className="w-8 h-8 md:w-10 md:h-10" style={{color: '#D4A574'}} />
                 <div className="absolute inset-0 animate-ping opacity-20">
-                  <StickyNote className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
+                  <StickyNote className="w-8 h-8 md:w-10 md:h-10" style={{color: '#D4A574'}} />
                 </div>
               </div>
               <div 
                 className="cursor-pointer"
                 onClick={() => setView('feed')}
               >
-                <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                <h1 className="text-xl md:text-2xl font-black" style={{
+                  background: 'linear-gradient(to right, #D4A574, #C9A875)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
                   마인드포스팃
                 </h1>
-                <p className="text-[10px] md:text-xs text-gray-600 font-medium">오늘 다 뱉음, 내일은 가벼움</p>
+                <p className="text-[10px] md:text-xs font-medium" style={{color: '#8B7355'}}>오늘 다 뱉음, 내일은 가벼움</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setView(view === 'feed' ? 'write' : 'feed')}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:from-amber-600 hover:to-orange-600 transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
+                className="text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
+                style={{
+                  background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                }}
               >
                 {view === 'feed' ? '📝 마음 남기기' : '📋 메아리 보기'}
               </button>
               <button
                 onClick={() => setShowAdmin(true)}
-                className="p-2 text-gray-600 hover:text-amber-600 transition-all"
+                className="p-2 transition-all"
+                style={{color: '#8B7355'}}
                 title="관리자"
               >
                 <Shield size={20} />
@@ -570,16 +615,21 @@ const App = () => {
         {view === 'feed' ? (
           <>
             <div className="mb-6 flex justify-center">
-              <div className="inline-flex bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-md border-2 border-yellow-200">
+              <div className="inline-flex bg-white/80 backdrop-blur-sm rounded-full p-1 shadow-md border-2" style={{borderColor: '#E8E0D5'}}>
                 {['최신순', '메아리순'].map((sortOption) => (
                   <button
                     key={sortOption}
                     onClick={() => setSortBy(sortOption)}
                     className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
                       sortBy === sortOption
-                        ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md'
-                        : 'text-gray-700 hover:text-gray-900'
+                        ? 'text-white shadow-md'
+                        : ''
                     }`}
+                    style={sortBy === sortOption ? {
+                      background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                    } : {
+                      color: '#6B5D4F'
+                    }}
                   >
                     {sortOption}
                   </button>
@@ -589,22 +639,25 @@ const App = () => {
 
             <div className="mb-8">
               <div className="text-center mb-6 md:mb-8">
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">울려퍼진 마음들</h2>
-                <p className="text-sm md:text-base text-gray-700 font-medium">욕도, 지껄임도 모든 OK</p>
-                <p className="text-xs text-amber-600 font-bold mt-2">⏰ 내일 자정에 흔적 없이 사라짐</p>
+                <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>오늘 밤의 마음들</h2>
+                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>새벽, 혼자만의 생각 🌙</p>
+                <p className="text-xs font-bold mt-2" style={{color: '#D4A574'}}>⏰ 내일 자정 사라짐</p>
               </div>
               
               {loading ? (
                 <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent"></div>
-                  <p className="mt-4 text-gray-600">마음들을 불러오고 있어요...</p>
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent" style={{borderColor: '#D4A574'}}></div>
+                  <p className="mt-4" style={{color: '#6B5D4F'}}>마음들을 불러오고 있어요...</p>
                 </div>
               ) : posts.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600 mb-4">아직 마음이 남겨지지 않았어요</p>
+                  <p className="mb-4" style={{color: '#6B5D4F'}}>아직 조용한 밤</p>
                   <button
                     onClick={() => setView('write')}
-                    className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full hover:from-amber-600 hover:to-orange-600 transition-all font-bold shadow-md"
+                    className="text-white px-6 py-3 rounded-full transition-all font-bold shadow-md"
+                    style={{
+                      background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                    }}
                   >
                     첫 번째 마음 남기기
                   </button>
@@ -655,20 +708,24 @@ const App = () => {
           </>
         ) : (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-yellow-100 border-2 border-yellow-300 rounded-2xl p-6 md:p-8 shadow-xl relative"
-                 style={{boxShadow: '8px 8px 16px rgba(0,0,0,0.15)'}}>
+            <div className="border-2 rounded-2xl p-6 md:p-8 shadow-xl relative"
+                 style={{
+                   background: '#FBF8F3',
+                   borderColor: '#E8E0D5',
+                   boxShadow: '8px 8px 16px rgba(0,0,0,0.1)'
+                 }}>
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-20 h-8 bg-white/50 rounded-sm" 
                    style={{boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
               
               <div className="text-center mb-6">
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-2">맘대로 써!</h2>
-                <p className="text-sm md:text-base text-gray-700 font-medium">X발이라고 써도 돼. 24시간 후 사라지니까.</p>
+                <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>잠 못 드는 밤 🌙</h2>
+                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>솔직하게 써도 괜찮아. 내일이면 사라지니까.</p>
               </div>
               
               {/* 주제 선택 */}
               {topics.length > 0 && (
                 <div className="mb-5">
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                  <label className="block text-sm font-bold mb-3" style={{color: '#4A3F35'}}>
                     💭 오늘의 주제를 선택해봐 (선택사항)
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -676,9 +733,15 @@ const App = () => {
                       onClick={() => setSelectedTopic(null)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         selectedTopic === null
-                          ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md'
-                          : 'bg-white/60 text-gray-700 hover:bg-white border-2 border-gray-300'
+                          ? 'text-white shadow-md'
+                          : 'bg-white/60 hover:bg-white border-2'
                       }`}
+                      style={selectedTopic === null ? {
+                        background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                      } : {
+                        color: '#6B5D4F',
+                        borderColor: '#D9CFC0'
+                      }}
                     >
                       자유 주제
                     </button>
@@ -688,9 +751,15 @@ const App = () => {
                         onClick={() => setSelectedTopic(topic.text)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                           selectedTopic === topic.text
-                            ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md'
-                            : 'bg-white/60 text-gray-700 hover:bg-white border-2 border-gray-300'
+                            ? 'text-white shadow-md'
+                            : 'bg-white/60 hover:bg-white border-2'
                         }`}
+                        style={selectedTopic === topic.text ? {
+                          background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                        } : {
+                          color: '#6B5D4F',
+                          borderColor: '#D9CFC0'
+                        }}
                       >
                         {topic.text}
                       </button>
@@ -702,8 +771,13 @@ const App = () => {
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 솔직하게..` : "진짜 솔직하게 써봐. 욕도 괜찮아."}
-                className="w-full p-4 md:p-5 border-2 border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-5 resize-none bg-yellow-50 font-medium text-gray-900 placeholder-gray-500"
+                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 솔직하게..` : "아무 말이나 괜찮아. 욕도 OK."}
+                className="w-full p-4 md:p-5 border-2 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent mb-5 resize-none font-medium"
+                style={{
+                  backgroundColor: '#FBF8F3',
+                  borderColor: '#E8E0D5',
+                  color: '#4A3F35'
+                }}
                 rows="8"
               />
               
@@ -711,13 +785,19 @@ const App = () => {
               <button
                 onClick={handleSubmit}
                 disabled={!content.trim()}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 md:py-4 rounded-xl hover:from-amber-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-black text-base md:text-lg shadow-lg hover:shadow-xl"
+                className="w-full text-white py-3 md:py-4 rounded-xl disabled:cursor-not-allowed transition-all font-black text-base md:text-lg shadow-lg hover:shadow-xl"
+                style={!content.trim() ? {
+                  background: '#C9C4BD',
+                  cursor: 'not-allowed'
+                } : {
+                  background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                }}
               >
-                털어놓기
+                남기기
               </button>
               <div className="text-center mt-3 space-y-1">
-                <p className="text-xs md:text-sm text-gray-600 font-medium">아무도 몰라. 완전 익명.</p>
-                <p className="text-xs text-amber-600 font-bold">⏰ 내일 자정에 흔적 없이 사라짐</p>
+                <p className="text-xs md:text-sm font-medium" style={{color: '#6B5D4F'}}>아무도 몰라. 완전 익명.</p>
+                <p className="text-xs font-bold" style={{color: '#D4A574'}}>⏰ 내일 자정 사라짐</p>
               </div>
             </div>
           </div>
@@ -725,15 +805,16 @@ const App = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200 py-4 mt-12">
+      <footer className="bg-white/70 backdrop-blur-sm py-4 mt-12" style={{borderTop: '1px solid #E8E0D5'}}>
         <div className="max-w-6xl mx-auto px-4 text-center">
           <button
             onClick={() => setShowTerms(true)}
-            className="text-sm text-gray-600 hover:text-amber-600 transition-colors underline"
+            className="text-sm transition-colors underline"
+            style={{color: '#8B7355'}}
           >
             이용약관
           </button>
-          <p className="text-xs text-gray-500 mt-2">© 2026 마인드포스팃. 24시간 후 사라지는 익명 감정 공유</p>
+          <p className="text-xs mt-2" style={{color: '#A89885'}}>© 2026 마인드포스팃. 새벽의 익명 공간</p>
         </div>
       </footer>
 
@@ -741,14 +822,30 @@ const App = () => {
       {showTerms && <Terms onClose={() => setShowTerms(false)} />}
 
       <style>{`
+        /* 종이 질감 효과 */
+        body::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0.03;
+          z-index: 1;
+          pointer-events: none;
+          background-image: 
+            repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+            repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+        }
+        
         @keyframes ripple-out {
           0% { transform: scale(0); opacity: 0.6; }
           100% { transform: scale(4); opacity: 0; }
         }
         
         @keyframes pulse-slow {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(1.05); }
+          0%, 100% { opacity: 0.15; transform: scale(1); }
+          50% { opacity: 0.25; transform: scale(1.05); }
         }
         
         .animate-ripple-out {
