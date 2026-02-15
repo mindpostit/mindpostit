@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBG5MofvBCD0y93vL-gT39bx76rNJWvztE",
@@ -14,6 +15,7 @@ const firebaseConfig = {
 // Firebase 초기화
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
 // 주제 관련 함수들
 export const getTopics = async () => {
@@ -210,3 +212,4 @@ export const updateConversationHistory = async (postId, history) => {
 };
 
 export default db;
+export { analytics };
