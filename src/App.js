@@ -596,7 +596,7 @@ const App = () => {
                   background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
                 }}
               >
-                {view === 'feed' ? '📝 마음 남기기' : '📋 메아리 보기'}
+                {view === 'feed' ? '📝 남기기' : '📋 메아리 보기'}
               </button>
               <button
                 onClick={() => setShowAdmin(true)}
@@ -659,7 +659,7 @@ const App = () => {
                       background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
                     }}
                   >
-                    첫 번째 마음 남기기
+                    지금 생각 남기기
                   </button>
                 </div>
               ) : (
@@ -719,7 +719,7 @@ const App = () => {
               
               <div className="text-center mb-6">
                 <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>잠 못 드는 밤 🌙</h2>
-                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>솔직하게 써도 괜찮아. 내일이면 사라지니까.</p>
+                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 괜찮아. 내일이면 사라지니까.</p>
               </div>
               
               {/* 주제 선택 */}
@@ -771,7 +771,7 @@ const App = () => {
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 솔직하게..` : "아무 말이나 괜찮아. 욕도 OK."}
+                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 솔직하게..` : "아무 말이나 남겨도 돼. 욕도 OK."}
                 className="w-full p-4 md:p-5 border-2 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent mb-5 resize-none font-medium"
                 style={{
                   backgroundColor: '#FBF8F3',
