@@ -462,12 +462,34 @@ const App = () => {
                 value={localComment}
                 onChange={(e) => setLocalComment(e.target.value)}
                 placeholder="너의 울림을 남겨줘"
-                className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-yellow-50"
+                className="w-full p-4 border-2 rounded-xl focus:outline-none focus:ring-2 resize-none"
+                style={{
+                  backgroundColor: '#FBF8F3',
+                  borderColor: '#E8E0D5',
+                  color: '#4A3F35'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#D4A574';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,165,116,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#E8E0D5';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
                 rows="3"
               />
               <button
                 onClick={handleSubmitComment}
-                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all font-bold shadow-md"
+                className="w-full text-white py-3 rounded-xl transition-all font-bold shadow-md hover:shadow-lg"
+                style={{
+                  background: 'linear-gradient(to right, #E0C9A8, #D4A574)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(to right, #D4A574, #C9A875)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(to right, #E0C9A8, #D4A574)';
+                }}
               >
                 울림 보내기
               </button>
@@ -483,7 +505,7 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{
+    <div className="min-h-screen relative overflow-hidden flex flex-col" style={{
       background: 'radial-gradient(ellipse 800px 600px at 50% 0%, #F5F1E8 0%, #E8E0D5 40%, #D9CFC0 100%)'
     }}>
       {/* 공감 메시지 선택 모달 */}
@@ -611,7 +633,7 @@ const App = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 md:py-8 relative z-10">
+      <main className="flex-1 max-w-6xl mx-auto px-4 py-6 md:py-8 relative z-10 w-full">
         {view === 'feed' ? (
           <>
             <div className="mb-6 flex justify-center">
@@ -719,7 +741,7 @@ const App = () => {
               
               <div className="text-center mb-6">
                 <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>잠 못 드는 밤 🌙</h2>
-                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 괜찮아. 내일이면 사라지니까.</p>
+                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 좋아. 내일이면 사라지니까.</p>
               </div>
               
               {/* 주제 선택 */}
@@ -805,16 +827,16 @@ const App = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/70 backdrop-blur-sm py-4 mt-12" style={{borderTop: '1px solid #E8E0D5'}}>
+      <footer className="bg-white/50 backdrop-blur-sm py-6 border-t" style={{borderColor: '#E8E0D5'}}>
         <div className="max-w-6xl mx-auto px-4 text-center">
           <button
             onClick={() => setShowTerms(true)}
-            className="text-sm transition-colors underline"
+            className="text-sm transition-colors underline hover:no-underline font-medium"
             style={{color: '#8B7355'}}
           >
             이용약관
           </button>
-          <p className="text-xs mt-2" style={{color: '#A89885'}}>© 2026 마인드포스팃. 새벽의 익명 공간</p>
+          <p className="text-xs mt-3 font-medium" style={{color: '#A89885'}}>© 2026 마인드포스팃. 새벽의 익명 공간</p>
         </div>
       </footer>
 
