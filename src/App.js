@@ -505,7 +505,7 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col" style={{
+    <div className="min-h-screen relative flex flex-col" style={{
       background: 'radial-gradient(ellipse 800px 600px at 50% 0%, #F5F1E8 0%, #E8E0D5 40%, #D9CFC0 100%)'
     }}>
       {/* 공감 메시지 선택 모달 */}
@@ -585,7 +585,7 @@ const App = () => {
         </div>
       )}
 
-      <header className={`bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b-2 transition-all ${selectedPost ? 'hidden' : ''}`} style={{borderColor: '#E8E0D5'}}>
+      <header className={`bg-white/80 backdrop-blur-sm shadow-sm fixed top-0 left-0 right-0 z-40 border-b-2 transition-all ${selectedPost ? 'hidden' : ''}`} style={{borderColor: '#E8E0D5'}}>
         <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-3">
@@ -633,7 +633,7 @@ const App = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 py-6 md:py-8 relative z-10 w-full">
+      <main className="flex-1 max-w-6xl mx-auto px-4 pt-20 md:pt-24 pb-6 md:pb-8 relative z-10 w-full">
         {view === 'feed' ? (
           <>
             <div className="mb-6 flex justify-center">
@@ -660,11 +660,14 @@ const App = () => {
             </div>
 
             <div className="mb-8">
-              <div className="text-center mb-6 md:mb-8">
-                <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>지금 떠오른 생각들</h2>
-                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 되는 생각들 🌙</p>
-                <p className="text-xs font-bold mt-2" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져</p>
-              </div>
+              {/* 피드 헤더는 글이 있을 때만 표시 */}
+              {!loading && posts.length > 0 && (
+                <div className="text-center mb-6 md:mb-8">
+                  <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>지금 떠오른 생각들</h2>
+                  <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 되는 생각들 🌙</p>
+                  <p className="text-xs font-bold mt-2" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져</p>
+                </div>
+              )}
               
               {loading ? (
                 <div className="text-center py-12">
@@ -672,17 +675,58 @@ const App = () => {
                   <p className="mt-4" style={{color: '#6B5D4F'}}>마음들을 불러오고 있어요...</p>
                 </div>
               ) : posts.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="mb-4" style={{color: '#6B5D4F'}}>지금은 조용한 시간</p>
+                <div className="max-w-md mx-auto text-center py-16 px-6">
+                  {/* 상단 문구 */}
+                  <div className="mb-8 space-y-3">
+                    <h3 className="text-2xl md:text-3xl font-black leading-tight" style={{color: '#4A3F35'}}>
+                      지금 떠오른 생각들
+                    </h3>
+                    <p className="text-base md:text-lg font-medium" style={{color: '#6B5D4F'}}>
+                      정리되지 않아도 되는 생각들 🌙
+                    </p>
+                    <p className="text-sm font-medium" style={{color: '#8B7355'}}>
+                      하루가 지나면 사라짐
+                    </p>
+                  </div>
+                  
+                  {/* 중간 문구 */}
+                  <div className="mb-6">
+                    <p className="text-lg font-bold" style={{color: '#6B5D4F'}}>
+                      지금은 조용한 시간
+                    </p>
+                  </div>
+                  
+                  {/* 버튼 */}
                   <button
                     onClick={() => setView('write')}
-                    className="text-white px-6 py-3 rounded-full transition-all font-bold shadow-md"
+                    className="text-white px-8 py-4 rounded-full transition-all font-black text-lg shadow-lg hover:shadow-xl mb-8"
                     style={{
-                      background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
+                      background: 'linear-gradient(to right, #E0C9A8, #D4A574)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(to right, #D4A574, #C9A875)';
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(to right, #E0C9A8, #D4A574)';
+                      e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
                     여기 남기기
                   </button>
+                  
+                  {/* 하단 정체성 문구 */}
+                  <div className="space-y-2 pt-6 border-t-2" style={{borderColor: '#E8E0D5'}}>
+                    <p className="text-sm font-bold" style={{color: '#4A3F35'}}>
+                      하루 뒤 사라지는 익명 공간
+                    </p>
+                    <p className="text-xs font-medium" style={{color: '#6B5D4F'}}>
+                      로그인 없이 이름 없이
+                    </p>
+                    <p className="text-xs font-bold" style={{color: '#D4A574'}}>
+                      매일 자정에 비워짐
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <>
