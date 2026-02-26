@@ -16,6 +16,7 @@ const App = () => {
   const [topics, setTopics] = useState([]);
   const [featuredPostId, setFeaturedPostId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [onlineCount, setOnlineCount] = useState(0);
   
   const [selectedPost, setSelectedPost] = useState(null);
   const [showRipple, setShowRipple] = useState(false);
@@ -27,16 +28,34 @@ const App = () => {
 
   // 공감 메시지 목록
   const echoMessageOptions = [
-    "공감함",
-    "공감못함",
-    "모르겠음"
+    { emoji: "🕯️", label: "읽었어요", desc: "여기 있었어요" },
+    { emoji: "💛", label: "나도요", desc: "같은 마음이에요" },
+    { emoji: "🌙", label: "괜찮아요", desc: "들었어요, 수고했어요" },
   ];
+
+  // 시간대별 자연스러운 접속자 수 생성
+  const getOnlineCount = () => {
+    const hour = new Date().getHours();
+    let min, max;
+    if (hour >= 0 && hour < 3)       { min = 8;  max = 18; }  // 자정~새벽3시 (피크)
+    else if (hour >= 3 && hour < 6)  { min = 4;  max = 10; }  // 새벽3~6시
+    else if (hour >= 6 && hour < 10) { min = 2;  max = 6;  }  // 아침
+    else if (hour >= 10 && hour < 22){ min = 3;  max = 8;  }  // 낮
+    else                              { min = 6;  max = 15; }  // 밤10시~자정
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadPosts();
     loadTopics();
     loadAndSelectFeaturedPost();
+    setOnlineCount(getOnlineCount());
+    // 3~5분마다 접속자 수 자연스럽게 변동
+    const interval = setInterval(() => {
+      setOnlineCount(getOnlineCount());
+    }, (Math.random() * 2 + 3) * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadPosts = async () => {
@@ -125,12 +144,21 @@ const App = () => {
   };
 
   const postitColors = [
-    'border-2',
-    'border-2',
-    'border-2',
-    'border-2',
-    'border-2'
+    { bg: '#FFF9C4', border: '#F0E68C', tape: '#F5E642' },  // 연노랑
+    { bg: '#FFE4E8', border: '#FFB3C1', tape: '#FF8FA3' },  // 연핑크
+    { bg: '#E8F5E9', border: '#B2DFDB', tape: '#80CBC4' },  // 연민트
+    { bg: '#EDE7F6', border: '#D1C4E9', tape: '#B39DDB' },  // 연보라
+    { bg: '#FFF3E0', border: '#FFE0B2', tape: '#FFCC80' },  // 연주황
+    { bg: '#E3F2FD', border: '#BBDEFB', tape: '#90CAF9' },  // 연파랑
   ];
+
+  // 카드별 고정 랜덤값 (리렌더 시 안 바뀌게 post.id 기반)
+  const getCardMeta = (postId) => {
+    const hash = postId ? postId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) : 0;
+    const colorIdx = hash % postitColors.length;
+    const rotation = ((hash % 5) - 2) * 0.8; // -1.6 ~ 1.6도
+    return { color: postitColors[colorIdx], rotation };
+  };
 
   const handleSubmit = async () => {
   if (!content.trim()) return;
@@ -143,7 +171,7 @@ const App = () => {
   if (lastPostTime) {
     const timeSinceLastPost = now - parseInt(lastPostTime);
     if (timeSinceLastPost < oneMinute) {
-      alert('너무 빨라! 1분에 한 번만 쓸 수 있어.');
+      alert('잠깐요! 1분에 한 번만 남길 수 있어요.');
       return;
     }
   }
@@ -211,6 +239,15 @@ const App = () => {
     
     setShowEchoModal(false);
     setEchoingPost(null);
+  };
+
+  const getPlaceholder = () => {
+    const hour = new Date().getHours();
+    if (selectedTopic) return `"${selectedTopic}"에 대해 느낌을 남겨보세요`;
+    if (hour >= 0 && hour < 3)  return "새벽엔 별 생각이 다 들죠";
+    if (hour >= 3 && hour < 6)  return "아직 안 자고 있어요?";
+    if (hour >= 22)              return "오늘 하루 어땠어요";
+    return "단어 하나만 던져도 괜찮아요";
   };
 
   const handleAddComment = async (postId, commentText) => {
@@ -289,61 +326,77 @@ const App = () => {
   };
 
   const PostCard = ({ post, onClick, index, isFeatured = false }) => {
-    const colorClass = isFeatured 
-      ? 'border-4' 
-      : postitColors[index % postitColors.length];
-    
-    const cardStyle = isFeatured 
+    const { color, rotation } = getCardMeta(post.id);
+
+    const cardStyle = isFeatured
       ? {
           background: 'linear-gradient(135deg, #FBF8F3 0%, #F5F1E8 100%)',
-          borderColor: '#D4A574',
-          boxShadow: '8px 8px 20px rgba(212, 165, 116, 0.3)',
+          border: '3px solid #D4A574',
+          boxShadow: '6px 6px 20px rgba(212,165,116,0.35)',
+          transform: 'rotate(0deg)',
         }
       : {
-          background: '#FBF8F3',
-          borderColor: '#E8E0D5',
-          boxShadow: '4px 4px 8px rgba(0,0,0,0.08)',
+          background: color.bg,
+          border: `2px solid ${color.border}`,
+          boxShadow: `3px 3px 10px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)`,
+          transform: `rotate(${rotation}deg)`,
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         };
-    
+
     return (
-      <div 
+      <div
         onClick={onClick}
-        className={`${colorClass} rounded-lg p-5 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer relative group`}
+        className="rounded-sm p-5 cursor-pointer relative group"
         style={cardStyle}
+        onMouseEnter={(e) => {
+          if (!isFeatured) {
+            e.currentTarget.style.transform = `rotate(0deg) scale(1.03)`;
+            e.currentTarget.style.boxShadow = `6px 6px 18px rgba(0,0,0,0.15)`;
+            e.currentTarget.style.zIndex = '10';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isFeatured) {
+            e.currentTarget.style.transform = `rotate(${rotation}deg) scale(1)`;
+            e.currentTarget.style.boxShadow = `3px 3px 10px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)`;
+            e.currentTarget.style.zIndex = '1';
+          }
+        }}
       >
-        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-white/40 rounded-sm" 
-             style={{boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}/>
-        
-        <div className="relative z-10">
+        {/* 테이프 */}
+        <div
+          className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-14 h-5 rounded-sm opacity-70"
+          style={{
+            background: isFeatured ? '#E8D5B0' : color.tape,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+          }}
+        />
+
+        <div className="relative z-10 mt-1">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-800">{post.author}</span>
-              <span className="text-xs text-gray-500">•</span>
-              <span className="text-xs text-gray-500">{post.timeAgo}</span>
+              <span className="text-sm font-bold text-gray-700">{post.author}</span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-gray-400">{post.timeAgo}</span>
             </div>
             <div className="flex items-center gap-2">
               {post.topic && (
-                <div className="flex items-center gap-1 text-xs text-blue-700 bg-white/60 px-2 py-0.5 rounded-full border border-blue-300">
+                <div className="flex items-center gap-1 text-xs text-amber-700 bg-white/60 px-2 py-0.5 rounded-full border border-amber-200">
                   <span>💭 {post.topic}</span>
-                </div>
-              )}
-              {post.wantDeeper && (
-                <div className="flex items-center gap-1 text-xs text-purple-700 bg-white/60 px-2 py-0.5 rounded-full border border-purple-300">
-                  <span>🔮 깊게 들어줘</span>
                 </div>
               )}
             </div>
           </div>
-          
-          <p className="text-gray-900 mb-4 line-clamp-3 font-medium leading-relaxed">{post.content}</p>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-700">
-            <button 
+
+          <p className="text-gray-800 mb-4 line-clamp-3 leading-loose" style={{fontFamily: "'Jua', sans-serif", fontSize: '1.35rem'}}>{post.content}</p>
+
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleEchoClick(post);
               }}
-              className="flex items-center gap-1.5 hover:text-purple-600 transition-colors group/echo"
+              className="flex items-center gap-1.5 hover:text-amber-600 transition-colors group/echo"
             >
               <div className="relative">
                 <EchoIcon count={post.echoes} />
@@ -351,9 +404,9 @@ const App = () => {
                   <EchoIcon count={post.echoes} />
                 </div>
               </div>
-              <span className="font-bold">{post.echoes}번의 메아리</span>
+              <span className="font-bold">{post.echoes > 0 ? `${post.echoes}명이 받았어요` : '메아리 보내기'}</span>
             </button>
-            
+
             <div className="flex items-center gap-1.5">
               <MessageCircle size={18} />
               <span className="font-bold">{post.comments?.length || 0}개의 울림</span>
@@ -406,7 +459,13 @@ const App = () => {
               )}
             </div>
             
-            <p className="text-gray-900 mb-6 whitespace-pre-wrap leading-relaxed font-medium">{post.content}</p>
+            <div className="rounded-xl p-4 mb-6" style={{
+              background: '#FFFEF5',
+              border: '1.5px solid #E8E0C8',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            }}>
+              <p className="text-gray-900 whitespace-pre-wrap leading-loose" style={{fontFamily: "'Jua', sans-serif", fontSize: '1.45rem'}}>{post.content}</p>
+            </div>
             
             <div className="mb-6 pb-6 border-b">
               <button 
@@ -414,36 +473,55 @@ const App = () => {
                 className="flex items-center gap-1.5 hover:text-purple-600 transition-colors mb-3"
               >
                 <EchoIcon count={post.echoes} />
-                <span className="font-bold text-sm text-gray-700">{post.echoes}번의 메아리</span>
+                <span className="font-bold text-sm text-gray-700">{post.echoes > 0 ? `${post.echoes}명이 받았어요` : '메아리 보내기'}</span>
               </button>
               
-              {/* 공감 메시지 상세 표시 */}
+              {/* 메아리 상세 표시 */}
               {post.echoMessages && Object.keys(post.echoMessages).length > 0 && (
                 <div className="space-y-2 mt-3">
-                  {Object.entries(post.echoMessages)
-                    .sort((a, b) => b[1] - a[1]) // 많은 순으로 정렬
-                    .map(([msg, count]) => (
-                      <div key={msg} className="flex items-center justify-between bg-purple-50 rounded-lg px-4 py-2 border border-purple-200">
-                        <span className="text-sm font-bold text-gray-800">{msg}</span>
-                        <span className="text-xs bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-bold">
-                          {count}명
-                        </span>
-                      </div>
-                    ))}
+                  {(() => {
+                    const total = Object.values(post.echoMessages).reduce((sum, c) => sum + c, 0);
+                    return Object.entries(post.echoMessages)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([msg, count]) => {
+                        const option = echoMessageOptions.find(o => o.label === msg);
+                        const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                        return (
+                          <div key={msg}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base">{option?.emoji || '🤍'}</span>
+                                <span className="text-sm font-bold" style={{color: '#4A3F35'}}>{msg}</span>
+                              </div>
+                              <span className="text-xs font-bold" style={{color: '#8B7355'}}>{count}명 · {percent}%</span>
+                            </div>
+                            <div className="w-full rounded-full h-2" style={{background: '#E8E0D5'}}>
+                              <div
+                                className="h-2 rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${percent}%`,
+                                  background: 'linear-gradient(to right, #E0C9A8, #D4A574)'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                  })()}
                 </div>
               )}
             </div>
             
             <div className="mb-4">
               <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <MessageCircle size={16} className="text-purple-600" />
+                <MessageCircle size={16} style={{color: '#D4A574'}} />
                 울림 {post.comments?.length || 0}개
               </h3>
             </div>
             
             <div className="space-y-3 mb-6">
               {(post.comments || []).map((comment, idx) => (
-                <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
+                <div key={idx} className="rounded-xl p-4 border" style={{background: '#FBF8F3', borderColor: '#E8E0D5'}}>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-bold text-gray-800">{comment.author}</span>
                     <span className="text-xs text-gray-400">•</span>
@@ -461,7 +539,7 @@ const App = () => {
               <textarea
                 value={localComment}
                 onChange={(e) => setLocalComment(e.target.value)}
-                placeholder="너의 울림을 남겨줘"
+                placeholder="울림을 남겨주세요"
                 className="w-full p-4 border-2 rounded-xl focus:outline-none focus:ring-2 resize-none"
                 style={{
                   backgroundColor: '#FBF8F3',
@@ -522,15 +600,18 @@ const App = () => {
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
             }}
           >
-            <h3 className="text-xl font-black mb-4 text-center" style={{color: '#4A3F35'}}>
-              공감을 남겨줘 💛
+            <h3 className="text-xl font-black mb-2 text-center" style={{color: '#4A3F35'}}>
+              메아리를 보내요
             </h3>
+            <p className="text-xs text-center mb-5 font-medium" style={{color: '#8B7355'}}>
+              이 글을 읽고 어떤 마음이 들었나요?
+            </p>
             <div className="space-y-2">
-              {echoMessageOptions.map((message) => (
+              {echoMessageOptions.map((option) => (
                 <button
-                  key={message}
-                  onClick={() => handleEchoWithMessage(message)}
-                  className="w-full py-3 rounded-xl transition-all font-bold"
+                  key={option.label}
+                  onClick={() => handleEchoWithMessage(option.label)}
+                  className="w-full py-3 px-4 rounded-xl transition-all font-bold flex items-center gap-3"
                   style={{
                     background: '#F5F1E8',
                     color: '#4A3F35',
@@ -548,7 +629,11 @@ const App = () => {
                     e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
                   }}
                 >
-                  {message}
+                  <span className="text-2xl">{option.emoji}</span>
+                  <div className="text-left">
+                    <div className="font-black text-sm" style={{color: '#4A3F35'}}>{option.label}</div>
+                    <div className="text-xs font-medium" style={{color: '#8B7355'}}>{option.desc}</div>
+                  </div>
                 </button>
               ))}
             </div>
@@ -586,37 +671,40 @@ const App = () => {
       )}
 
       <header className={`bg-white/80 backdrop-blur-sm shadow-sm fixed top-0 left-0 right-0 z-40 border-b-2 transition-all ${selectedPost ? 'hidden' : ''}`} style={{borderColor: '#E8E0D5'}}>
-        <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
-                <StickyNote className="w-8 h-8 md:w-10 md:h-10" style={{color: '#D4A574'}} />
+                <StickyNote className="w-7 h-7 md:w-10 md:h-10" style={{color: '#D4A574'}} />
                 <div className="absolute inset-0 animate-ping opacity-20">
-                  <StickyNote className="w-8 h-8 md:w-10 md:h-10" style={{color: '#D4A574'}} />
+                  <StickyNote className="w-7 h-7 md:w-10 md:h-10" style={{color: '#D4A574'}} />
                 </div>
               </div>
-              <div 
-                className="cursor-pointer"
-                onClick={() => setView('feed')}
-              >
+              <div className="cursor-pointer" onClick={() => setView('feed')}>
                 <h1 className="text-xl md:text-2xl font-black" style={{
                   background: 'linear-gradient(to right, #D4A574, #C9A875)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
+                  backgroundClip: 'text',
+                  fontFamily: "'Jua', sans-serif"
                 }}>
                   마인드포스팃
                 </h1>
-                <p className="text-[10px] md:text-xs font-medium" style={{color: '#8B7355'}}>오늘 다 뱉음, 내일은 가벼움</p>
+                <p className="hidden md:block text-xs font-medium" style={{color: '#8B7355'}}>오늘 다 내려놓고, 내일은 가볍게요</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* 접속자 수: 모바일은 축약, PC는 풀텍스트 */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold"
+                style={{background: 'rgba(212,165,116,0.15)', color: '#8B7355', border: '1px solid rgba(212,165,116,0.3)'}}>
+                <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{background: '#D4A574'}}/>
+                <span className="md:hidden">🌙 {onlineCount}명</span>
+                <span className="hidden md:inline">지금 {onlineCount}명이 깨어있어요</span>
+              </div>
               <button
                 onClick={() => setView(view === 'feed' ? 'write' : 'feed')}
                 className="text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
-                style={{
-                  background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
-                }}
+                style={{background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'}}
               >
                 {view === 'feed' ? '📝 남기기' : '📋 메아리 보기'}
               </button>
@@ -633,7 +721,7 @@ const App = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 pt-20 md:pt-24 pb-6 md:pb-8 relative z-10 w-full">
+      <main className="flex-1 max-w-6xl mx-auto px-4 pt-24 md:pt-28 pb-6 md:pb-8 relative z-10 w-full">
         {view === 'feed' ? (
           <>
             <div className="mb-6 flex justify-center">
@@ -665,7 +753,7 @@ const App = () => {
                 <div className="text-center mb-6 md:mb-8">
                   <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>지금 떠오른 생각들</h2>
                   <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 되는 생각들 🌙</p>
-                  <p className="text-xs font-bold mt-2" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져</p>
+                  <p className="text-xs font-bold mt-2" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져요</p>
                 </div>
               )}
               
@@ -685,7 +773,7 @@ const App = () => {
                       정리되지 않아도 되는 생각들 🌙
                     </p>
                     <p className="text-sm font-medium" style={{color: '#8B7355'}}>
-                      하루가 지나면 사라짐
+                      하루가 지나면 사라져요
                     </p>
                   </div>
                   
@@ -718,13 +806,13 @@ const App = () => {
                   {/* 하단 정체성 문구 */}
                   <div className="space-y-2 pt-6 border-t-2" style={{borderColor: '#E8E0D5'}}>
                     <p className="text-sm font-bold" style={{color: '#4A3F35'}}>
-                      하루 뒤 사라지는 익명 공간
+                      하루 뒤 사라지는 익명 공간이에요
                     </p>
                     <p className="text-xs font-medium" style={{color: '#6B5D4F'}}>
-                      로그인 없이 이름 없이
+                      로그인 없이, 이름 없이
                     </p>
                     <p className="text-xs font-bold" style={{color: '#D4A574'}}>
-                      매일 자정에 비워짐
+                      매일 자정에 비워져요
                     </p>
                   </div>
                 </div>
@@ -732,19 +820,44 @@ const App = () => {
                 <>
                   {/* 오늘의 포스트잇 */}
                   {featuredPostId && sortedPosts.find(p => p.id === featuredPostId) && (
-                    <div className="mb-8">
-                      <div className="text-center mb-4">
-                        <h3 className="text-lg md:text-xl font-black text-amber-600 mb-1">
-                          📌 오늘의 포스팃
-                        </h3>
-                      </div>
-                      <div className="max-w-2xl mx-auto">
-                        <PostCard 
-                          post={sortedPosts.find(p => p.id === featuredPostId)}
-                          index={-1}
-                          onClick={() => setSelectedPost(sortedPosts.find(p => p.id === featuredPostId))}
-                          isFeatured={true}
-                        />
+                    <div className="mb-10">
+                      {/* 배경 강조 영역 */}
+                      <div className="relative rounded-2xl p-6 md:p-8"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(212,165,116,0.15) 0%, rgba(201,168,117,0.08) 100%)',
+                          border: '1.5px solid rgba(212,165,116,0.35)',
+                        }}>
+                        {/* 타이틀 */}
+                        <div className="flex items-center justify-center gap-2 mb-5">
+                          <div className="h-px flex-1" style={{background: 'linear-gradient(to right, transparent, rgba(212,165,116,0.5))'}}/>
+                          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
+                            style={{background: 'rgba(212,165,116,0.2)', border: '1px solid rgba(212,165,116,0.4)'}}>
+                            <span className="text-base">📌</span>
+                            <span className="text-sm font-black" style={{color: '#B8874E'}}>오늘의 포스팃</span>
+                          </div>
+                          <div className="h-px flex-1" style={{background: 'linear-gradient(to left, transparent, rgba(212,165,116,0.5))'}}/>
+                        </div>
+                        {/* 카드 */}
+                        <div className="max-w-xl mx-auto">
+                          <PostCard
+                            post={sortedPosts.find(p => p.id === featuredPostId)}
+                            index={-1}
+                            onClick={() => setSelectedPost(sortedPosts.find(p => p.id === featuredPostId))}
+                            isFeatured={true}
+                          />
+                        </div>
+                        {/* 하단 문구 */}
+                        {(() => {
+                          const fp = sortedPosts.find(p => p.id === featuredPostId);
+                          const echoCount = fp?.echoes || 0;
+                          return (
+                            <p className="text-center text-xs mt-4 font-medium" style={{color: '#A89070'}}>
+                              {echoCount > 0
+                                ? `${echoCount}명이 메아리를 보냈어요`
+                                : '오늘의 포스팃이에요'}
+                            </p>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -785,14 +898,14 @@ const App = () => {
               
               <div className="text-center mb-6">
                 <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>잠 못 드는 밤 🌙</h2>
-                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 좋아. 하루가 지나면 사라져.</p>
+                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 괜찮아요. 하루가 지나면 사라져요.</p>
               </div>
               
               {/* 주제 선택 */}
               {topics.length > 0 && (
                 <div className="mb-5">
                   <label className="block text-sm font-bold mb-3" style={{color: '#4A3F35'}}>
-                    💭 오늘의 주제를 선택해봐 (선택사항)
+                    💭 오늘의 주제를 선택해보세요 (선택사항)
                   </label>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -837,7 +950,7 @@ const App = () => {
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={selectedTopic ? `"${selectedTopic}"에 대해 느낌을..` : "지금 떠오른 단어 하나만 적어도 괜찮아."}
+                placeholder={getPlaceholder()}
                 className="w-full p-4 md:p-5 border-2 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent mb-5 resize-none font-medium"
                 style={{
                   backgroundColor: '#FBF8F3',
@@ -863,7 +976,7 @@ const App = () => {
               </button>
               <div className="text-center mt-3 space-y-1">
                 <p className="text-xs md:text-sm font-medium" style={{color: '#6B5D4F'}}>이름 없이 남고</p>
-                <p className="text-xs font-bold" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라짐</p>
+                <p className="text-xs font-bold" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져요</p>
               </div>
             </div>
           </div>
