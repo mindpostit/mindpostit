@@ -493,7 +493,7 @@ const App = () => {
                                 <span className="text-base">{option?.emoji || '🤍'}</span>
                                 <span className="text-sm font-bold" style={{color: '#4A3F35'}}>{msg}</span>
                               </div>
-                              <span className="text-xs font-bold" style={{color: '#8B7355'}}>{count}명 · {percent}%</span>
+                              <span className="text-xs font-bold" style={{color: '#8B7355'}}>{count}명</span>
                             </div>
                             <div className="w-full rounded-full h-2" style={{background: '#E8E0D5'}}>
                               <div
