@@ -681,7 +681,7 @@ const App = () => {
                 </div>
               </div>
               <div className="cursor-pointer" onClick={() => setView('feed')}>
-                <h1 className="text-xl md:text-xl font-black" style={{
+                <h1 className="text-lg md:text-2xl font-black" style={{
                   background: 'linear-gradient(to right, #D4A574, #C9A875)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
