@@ -686,7 +686,7 @@ const App = () => {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  fontFamily: "'Jua', sans-serif"
+                  
                 }}>
                   마인드포스팃
                 </h1>
