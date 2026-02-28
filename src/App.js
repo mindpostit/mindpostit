@@ -689,7 +689,7 @@ const App = () => {
                   fontFamily: "'Pretendard', sans-serif",
                   fontSize: window.innerWidth < 768 ? '1.1rem' : '1.7rem',
                   lineHeight: '1.2',
-                  fontWeight: '700'
+                  fontWeight: '800'
                 }}>
                   마인드포스팃
                 </h1>
