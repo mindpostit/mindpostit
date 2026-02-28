@@ -687,7 +687,7 @@ const App = () => {
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
                   fontFamily: "'Pretendard', sans-serif",
-                  fontSize: '1.7rem',
+                  fontSize: window.innerWidth < 768 ? '1rem' : '1.7rem',
                   lineHeight: '1.2'
                 }}>
                   마인드포스팃
