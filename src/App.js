@@ -708,7 +708,7 @@ const App = () => {
                 className="text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
                 style={{background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'}}
               >
-                {view === 'feed' ? '📝 남기기' : '📋 메아리 보기'}
+                {view === 'feed' ? '📝 남기기' : '📋 메아리'}
               </button>
               <button
                 onClick={() => setShowAdmin(true)}
