@@ -493,7 +493,7 @@ const App = () => {
                                 <span className="text-base">{option?.emoji || '🤍'}</span>
                                 <span className="text-sm font-bold" style={{color: '#4A3F35'}}>{msg}</span>
                               </div>
-                              <span className="text-xs font-bold" style={{color: '#8B7355'}}>{count}명</span>
+                              <span className="text-xs font-bold" style={{color: '#8B7355'}}>{count}명 · {percent}%</span>
                             </div>
                             <div className="w-full rounded-full h-2" style={{background: '#E8E0D5'}}>
                               <div
@@ -681,12 +681,14 @@ const App = () => {
                 </div>
               </div>
               <div className="cursor-pointer" onClick={() => setView('feed')}>
-                <h1 className="text-lg md:text-lg font-black" style={{
+                <h1 className="font-black" style={{
                   background: 'linear-gradient(to right, #D4A574, #C9A875)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  
+                  fontFamily: "'Nanum Pen Script', cursive",
+                  fontSize: '1.7rem',
+                  lineHeight: '1.2'
                 }}>
                   마인드포스팃
                 </h1>
