@@ -674,7 +674,7 @@ const App = () => {
         <div className="max-w-6xl mx-auto px-4 py-2.5 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="relative">
+              <div className="relative hidden md:block">
                 <StickyNote className="w-7 h-7 md:w-10 md:h-10" style={{color: '#D4A574'}} />
                 <div className="absolute inset-0 animate-ping opacity-20">
                   <StickyNote className="w-7 h-7 md:w-10 md:h-10" style={{color: '#D4A574'}} />
@@ -686,7 +686,7 @@ const App = () => {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  fontFamily: "'Nanum Pen Script', cursive",
+                  fontFamily: "'Pretendard', sans-serif",
                   fontSize: '1.7rem',
                   lineHeight: '1.2'
                 }}>
