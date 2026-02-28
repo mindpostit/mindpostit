@@ -686,7 +686,7 @@ const App = () => {
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text',
-                      fontFamily: "'Pretendard', sans-serif",
+                      fontFamily: "'Do Hyeon', sans-serif",
                       fontWeight: '900',
                       lineHeight: '1.2'
                     }}>
