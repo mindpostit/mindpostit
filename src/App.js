@@ -681,16 +681,15 @@ const App = () => {
                 </div>
               </div>
               <div className="cursor-pointer" onClick={() => setView('feed')}>
-                <h1 className="font-black" style={{
-                  background: 'linear-gradient(to right, #D4A574, #C9A875)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  fontFamily: "'Pretendard', sans-serif",
-                  fontSize: window.innerWidth < 768 ? '1.1rem' : '1.7rem',
-                  lineHeight: '1.2',
-                  fontWeight: '800'
-                }}>
+                <h1 className="text-lg md:text-2xl" style={{
+                      background: 'linear-gradient(to right, #D4A574, #C9A875)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      fontFamily: "'Pretendard', sans-serif",
+                      fontWeight: '800',
+                      lineHeight: '1.2'
+                    }}>
                   마인드포스팃
                 </h1>
                 <p className="hidden md:block text-xs font-medium" style={{color: '#8B7355'}}>오늘 다 내려놓고, 내일은 가볍게요</p>
