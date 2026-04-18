@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 
 export default function Intro({ setView, user, setPrevView }) {
   const introRef = useRef(null);
+  const writeRef = useRef(null);
   const flowRef = useRef(null);
 
   const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: 'smooth' });
@@ -17,7 +18,7 @@ export default function Intro({ setView, user, setPrevView }) {
         <nav style={{ maxWidth: '1360px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '18px', fontWeight: '400', letterSpacing: '.06em', color: '#7b7368', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <a onClick={() => scrollTo(introRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>소개</a>
+            <a onClick={() => scrollTo(writeRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>소개</a>
             <a onClick={() => scrollTo(flowRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>이용 흐름</a>
             <button onClick={goWrite} style={{ padding: '14px 22px', borderRadius: '999px', background: '#23231f', color: '#f8f5ef', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '800', fontFamily: "'Noto Sans KR', sans-serif", boxShadow: '0 10px 24px rgba(35,35,31,.16)' }}>지금 남기기</button>
           </div>
@@ -49,7 +50,7 @@ export default function Intro({ setView, user, setPrevView }) {
         </section>
 
         {/* 소개 */}
-        <section style={{ padding: '88px 24px' }}>
+        <section ref={writeRef} style={{ padding: '88px 24px' }}>
           <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
             <div style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '.18em', color: '#a29789', marginBottom: '12px' }}>소개</div>
             <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', lineHeight: '1.28', letterSpacing: '-.04em', fontWeight: '900', marginBottom: '12px' }}>마인드포스팃은 익명 게시판이 아니라,<br />조용히 받아주는 1:1 개인 공간이에요.</h2>
