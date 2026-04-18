@@ -1,11 +1,7 @@
-import React, { useRef } from 'react';
+import React from 'react';
 
 export default function Intro({ setView, user, setPrevView }) {
-  const introRef = useRef(null);
-  const writeRef = useRef(null);
-  const flowRef = useRef(null);
-
-  const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
   const goWrite = () => setView('write');
   const goLogin = () => { if (user && !user.isAnonymous) { setView('home'); } else { setPrevView && setPrevView('intro'); setView('login'); } };
@@ -18,8 +14,8 @@ export default function Intro({ setView, user, setPrevView }) {
         <nav style={{ maxWidth: '1360px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '18px', fontWeight: '400', letterSpacing: '.06em', color: '#7b7368', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <a onClick={() => scrollTo(writeRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>소개</a>
-            <a onClick={() => scrollTo(flowRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>이용 흐름</a>
+            <a onClick={() => scrollTo('write-section')} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>소개</a>
+            <a onClick={() => scrollTo('flow')} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>이용 흐름</a>
             <button onClick={goWrite} style={{ padding: '14px 22px', borderRadius: '999px', background: '#23231f', color: '#f8f5ef', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '800', fontFamily: "'Noto Sans KR', sans-serif", boxShadow: '0 10px 24px rgba(35,35,31,.16)' }}>지금 남기기</button>
           </div>
         </nav>
@@ -27,7 +23,7 @@ export default function Intro({ setView, user, setPrevView }) {
 
       <main>
         {/* 히어로 */}
-        <section ref={introRef} style={{ minHeight: 'calc(100vh - 82px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '54px 24px 64px', background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,.70), rgba(255,255,255,0) 42%)' }}>
+        <section style={{ minHeight: 'calc(100vh - 82px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '54px 24px 64px', background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,.70), rgba(255,255,255,0) 42%)' }}>
           <div style={{ width: 'min(100%, 700px)', background: 'rgba(255,255,255,.65)', border: '1px solid rgba(255,255,255,.82)', borderRadius: '42px', padding: '48px 42px 36px', boxShadow: '0 28px 80px rgba(38,37,34,.10)', textAlign: 'center' }}>
             <div style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#a79c8e', marginBottom: '22px', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
             <h1 style={{ fontSize: 'clamp(34px, 7vw, 64px)', lineHeight: '1.18', letterSpacing: '-.06em', fontWeight: '900', marginBottom: '28px' }}>어떤 이야기든,<br />여기선 괜찮아요.</h1>
@@ -37,7 +33,7 @@ export default function Intro({ setView, user, setPrevView }) {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', margin: '28px 0 24px' }}>
               <button onClick={goWrite} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: '#23231f', color: '#f8f5ef', border: 'none', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", boxShadow: '0 14px 28px rgba(35,35,31,.18)' }}>지금 남기기</button>
               <button onClick={goLogin} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>로그인 · 나만의 공간</button>
-              <button onClick={() => document.getElementById('flow')?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>먼저 둘러보기</button>
+              <button onClick={() => scrollTo('flow')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>먼저 둘러보기</button>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '22px' }}>
@@ -50,7 +46,7 @@ export default function Intro({ setView, user, setPrevView }) {
         </section>
 
         {/* 소개 */}
-        <section ref={writeRef} style={{ padding: '88px 24px' }}>
+        <section id="write-section" style={{ padding: '88px 24px' }}>
           <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
             <div style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '.18em', color: '#a29789', marginBottom: '12px' }}>소개</div>
             <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', lineHeight: '1.28', letterSpacing: '-.04em', fontWeight: '900', marginBottom: '12px' }}>마인드포스팃은 익명 게시판이 아니라,<br />조용히 받아주는 1:1 개인 공간이에요.</h2>
@@ -72,7 +68,7 @@ export default function Intro({ setView, user, setPrevView }) {
         </section>
 
         {/* 이용 흐름 */}
-        <section id="flow" ref={flowRef} style={{ padding: '88px 24px' }}>
+        <section id="flow" style={{ padding: '88px 24px' }}>
           <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
             <div style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '.18em', color: '#a29789', marginBottom: '12px' }}>이용 흐름</div>
             <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', lineHeight: '1.28', letterSpacing: '-.04em', fontWeight: '900', marginBottom: '12px' }}>복잡하지 않게, 네 단계면 충분해요.</h2>
@@ -168,7 +164,7 @@ export default function Intro({ setView, user, setPrevView }) {
             <p style={{ fontSize: '18px', lineHeight: '1.9', color: '#6c655d', maxWidth: '720px', margin: '0 auto 24px' }}>말하기 어려운 이야기일수록, 조용히 둘 곳이 필요하니까. 오늘 마음 한 장을 마인드포스팃에 남겨보세요.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <button onClick={goWrite} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: '#23231f', color: '#f8f5ef', border: 'none', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", boxShadow: '0 14px 28px rgba(35,35,31,.18)' }}>지금 남기기</button>
-              <button onClick={() => scrollTo(introRef)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>처음으로</button>
+              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>처음으로</button>
             </div>
           </div>
         </section>
