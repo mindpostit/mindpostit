@@ -80,6 +80,7 @@ export default function App() {
       {view === 'write' && <Write user={user} setView={setView} />}
       {view === 'done' && <Done setView={setView} setPrevView={setPrevView} />}
       {view === 'login' && <Login setView={setView} setUser={setUser} prevView={prevView} />}
+      {view === 'reset' && <ResetPassword setView={setView} />}
       {view === 'signup' && <Signup setView={setView} setUser={setUser} />}
       {view === 'home' && <Home user={user} setView={setView} setUser={setUser} goThread={goThread} />}
       {view === 'thread' && <Thread thread={currentThread} setView={setView} />}
@@ -231,7 +232,6 @@ function Login({ setView, setUser, prevView = 'intro' }) {
   const [pw, setPw] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resetSent, setResetSent] = useState(false);
 
   const doLogin = async () => {
     if (!email || !pw) { setError('이메일과 비밀번호를 입력해줘요.'); return; }
@@ -240,13 +240,6 @@ function Login({ setView, setUser, prevView = 'intro' }) {
     if (r.success) { setUser(r.user); setView('home'); }
     else setError(r.message);
     setLoading(false);
-  };
-
-  const doReset = async () => {
-    if (!email) { setError('이메일을 먼저 입력해줘요.'); return; }
-    const r = await resetPassword(email);
-    if (r.success) setResetSent(true);
-    else setError('비밀번호 재설정 이메일 전송에 실패했어요.');
   };
 
   return (
@@ -266,10 +259,9 @@ function Login({ setView, setUser, prevView = 'intro' }) {
           <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" style={inputStyle} onKeyDown={e => e.key === 'Enter' && doLogin()} />
         </div>
         <div style={{ textAlign: 'right', marginBottom: '12px' }}>
-          <button onClick={doReset} style={{ fontSize: '10px', color: '#aba295', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}>비밀번호 찾기</button>
+          <button onClick={() => setView('reset')} style={{ fontSize: '10px', color: '#aba295', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}>비밀번호 찾기</button>
         </div>
 
-        {resetSent && <p style={{ fontSize: '11px', color: '#2a7a2a', marginBottom: '8px', textAlign: 'center' }}>재설정 이메일을 보냈어요.</p>}
         {error && <p style={{ fontSize: '11px', color: '#d4433a', marginBottom: '8px', textAlign: 'center' }}>{error}</p>}
 
         <button style={{ ...btnFill, opacity: loading ? 0.6 : 1, marginBottom: '12px' }} onClick={doLogin} disabled={loading}>{loading ? '로그인 중...' : '로그인'}</button>
@@ -293,6 +285,56 @@ function Login({ setView, setUser, prevView = 'intro' }) {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── 비밀번호 찾기 ─────────────────────────────
+function ResetPassword({ setView }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+
+  const doReset = async () => {
+    if (!email) { setError('이메일을 입력해줘요.'); return; }
+    setLoading(true); setError('');
+    const r = await resetPassword(email);
+    if (r.success) setSent(true);
+    else setError('이메일 전송에 실패했어요. 가입된 이메일인지 확인해줘요.');
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <button onClick={() => setView('login')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 로그인으로</button>
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
+        {!sent ? (
+          <>
+            <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>비밀번호를 잊었나요?</div>
+            <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.muted, marginBottom: '18px' }}>가입한 이메일을 입력하면 재설정 링크를 보내드려요.</div>
+            <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>이메일</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="hello@email.com" style={{ ...inputStyle, marginBottom: '14px' }} onKeyDown={e => e.key === 'Enter' && doReset()} />
+            {error && <p style={{ fontSize: '11px', color: '#d4433a', marginBottom: '10px', textAlign: 'center' }}>{error}</p>}
+            <button style={{ ...btnFill, opacity: loading ? 0.6 : 1 }} onClick={doReset} disabled={loading}>
+              {loading ? '보내는 중...' : '재설정 링크 보내기'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: '28px', textAlign: 'center', marginBottom: '12px' }}>📬</div>
+            <div style={{ fontSize: '15px', fontWeight: '800', textAlign: 'center', marginBottom: '8px' }}>이메일을 보냈어요.</div>
+            <div style={{ fontSize: '12px', lineHeight: '1.8', color: C.muted, textAlign: 'center', marginBottom: '18px' }}>
+              <span style={{ fontWeight: '700', color: C.ink }}>{email}</span>으로<br />재설정 링크를 보냈어요.<br />메일함을 확인해줘요.
+            </div>
+            <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.soft, textAlign: 'center', marginBottom: '16px', background: C.bg, borderRadius: '9px', padding: '10px' }}>
+              스팸함에도 없다면<br />이메일을 다시 확인해줘요.
+            </div>
+            <button style={btnFill} onClick={() => setView('login')}>로그인으로 돌아가기</button>
+          </>
+        )}
       </div>
     </div>
   );
