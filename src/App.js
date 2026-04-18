@@ -1,1044 +1,634 @@
-import React, { useState, useEffect } from 'react';
-import { MessageCircle, Shield, StickyNote } from 'lucide-react';
-import { createPost, getPosts, addEchoWithMessage, addComment, getTopics, getTodaysFeaturedPost, setTodaysFeaturedPost } from './firebase';
-import { analytics } from './firebase';
-import { logEvent } from 'firebase/analytics';
-import Admin from './Admin';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  signInAnon, signUpWithEmail, signInWithEmail, resetPassword, logOut,
+  onAuthChange, createThread, addMessage, subscribeMessages,
+  subscribeUserThreads, subscribeAllThreads, setThreadAlert
+} from './firebase';
 import { validateContent } from './contentFilter';
-import Terms from './Terms';
 
-const App = () => {
-  const [showTerms, setShowTerms] = useState(false);
-  const [view, setView] = useState('feed');
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [sortBy, setSortBy] = useState('최신순');
-  const [posts, setPosts] = useState([]);
-  const [topics, setTopics] = useState([]);
-  const [featuredPostId, setFeaturedPostId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [onlineCount, setOnlineCount] = useState(0);
-  
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [showRipple, setShowRipple] = useState(false);
-  const [showEchoModal, setShowEchoModal] = useState(false);
-  const [echoingPost, setEchoingPost] = useState(null);
-  
-  const [content, setContent] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState(null);
+// ── 관리자 이메일 (준의 실제 이메일로 변경) ──
+const ADMIN_EMAIL = 'peerlabs@naver.com';
 
-  // 공감 메시지 목록
-  const echoMessageOptions = [
-    { emoji: "🕯️", label: "읽었어요", desc: "여기 있었어요" },
-    { emoji: "💛", label: "나도요", desc: "같은 마음이에요" },
-    { emoji: "🌙", label: "괜찮아요", desc: "들었어요, 수고했어요" },
-  ];
+// ── 색상 시스템 ──────────────────────────────
+const C = {
+  bg: '#f3ede4',
+  bg2: '#ebe3d8',
+  paper: '#fffdfa',
+  panel: '#faf5ee',
+  line: '#d9d0c3',
+  ink: '#262522',
+  muted: '#7d766d',
+  soft: '#9f968b',
+  accent: '#23231f',
+};
 
-  // 시간대별 자연스러운 접속자 수 생성
-  const getOnlineCount = () => {
-    const hour = new Date().getHours();
-    let min, max;
-    if (hour >= 0 && hour < 3)       { min = 8;  max = 18; }  // 자정~새벽3시 (피크)
-    else if (hour >= 3 && hour < 6)  { min = 4;  max = 10; }  // 새벽3~6시
-    else if (hour >= 6 && hour < 10) { min = 2;  max = 6;  }  // 아침
-    else if (hour >= 10 && hour < 22){ min = 3;  max = 8;  }  // 낮
-    else                              { min = 6;  max = 15; }  // 밤10시~자정
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
+// ── 유틸 ─────────────────────────────────────
+const fmt = (ts) => {
+  if (!ts) return '방금';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 86400000);
+  const t = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 0) return `오늘 ${t}`;
+  if (diff === 1) return `어제 ${t}`;
+  return `${diff}일 전`;
+};
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+const isAdmin = (u) => u && u.email === ADMIN_EMAIL;
+
+// ── 공통 스타일 ──────────────────────────────
+const btnFill = { width: '100%', padding: '11px', border: 'none', borderRadius: '10px', background: C.accent, color: '#f8f5ef', fontSize: '13px', fontWeight: '800', letterSpacing: '.04em', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" };
+const btnOutline = { width: '100%', padding: '10px', border: `1px solid ${C.line}`, borderRadius: '10px', background: 'transparent', color: '#5d5851', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" };
+const btnSoft = { width: '100%', padding: '10px', border: `1px dashed #d5cabe`, borderRadius: '10px', background: 'transparent', color: '#988f83', fontSize: '12px', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" };
+const inputStyle = { width: '100%', height: '34px', padding: '0 12px', border: `1px solid ${C.line}`, borderRadius: '9px', background: C.paper, fontSize: '13px', fontWeight: '300', color: C.ink, outline: 'none', fontFamily: "'Noto Sans KR', sans-serif", marginBottom: '0' };
+const pageStyle = { minHeight: '100vh', background: `linear-gradient(180deg,#f6f1ea 0%,#ede5da 100%)`, fontFamily: "'Noto Sans KR', sans-serif" };
+const centerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px' };
+
+// ── 앱 ───────────────────────────────────────
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [view, setView] = useState('splash');
+  const [currentThread, setCurrentThread] = useState(null);
+
   useEffect(() => {
-    loadPosts();
-    loadTopics();
-    loadAndSelectFeaturedPost();
-    setOnlineCount(getOnlineCount());
-    // 3~5분마다 접속자 수 자연스럽게 변동
-    const interval = setInterval(() => {
-      setOnlineCount(getOnlineCount());
-    }, (Math.random() * 2 + 3) * 60 * 1000);
-    return () => clearInterval(interval);
+    const unsub = onAuthChange((u) => { setUser(u); setAuthReady(true); });
+    return unsub;
   }, []);
 
-  const loadPosts = async () => {
+  useEffect(() => {
+    if (authReady && !user) signInAnon();
+  }, [authReady, user]);
+
+  const goThread = (t) => { setCurrentThread(t); setView('thread'); };
+
+  if (!authReady) return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <p style={{ fontSize: '13px', fontWeight: '300', color: C.soft }}>잠깐만요...</p>
+    </div>
+  );
+
+  if (user && isAdmin(user)) return <AdminView user={user} setUser={setUser} />;
+
+  return (
+    <div style={pageStyle}>
+      {view === 'splash' && <Splash setView={setView} user={user} />}
+      {view === 'write' && <Write user={user} setView={setView} />}
+      {view === 'done' && <Done setView={setView} />}
+      {view === 'login' && <Login setView={setView} setUser={setUser} />}
+      {view === 'signup' && <Signup setView={setView} setUser={setUser} />}
+      {view === 'home' && <Home user={user} setView={setView} setUser={setUser} goThread={goThread} />}
+      {view === 'thread' && <Thread thread={currentThread} setView={setView} />}
+    </div>
+  );
+}
+
+// ── 스플래시 ─────────────────────────────────
+function Splash({ setView, user }) {
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '900', letterSpacing: '.22em', color: '#a29789', marginBottom: '22px' }}>마인드포스팃</div>
+        <h1 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
+          어떤 이야기든,<br />여기선 괜찮아요.
+        </h1>
+        <div style={{ width: '1px', height: '22px', background: '#c0b6a8', margin: '14px auto' }} />
+        <p style={{ fontSize: '14px', fontWeight: '300', lineHeight: '1.8', color: '#7a7168' }}>충분히 들어줄게요.</p>
+      </div>
+
+      <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <button style={btnFill} onClick={() => setView('write')}>지금 남기기</button>
+        <button style={btnOutline} onClick={() => setView(user && !user.isAnonymous ? 'home' : 'login')}>로그인 · 나만의 공간</button>
+        <button style={btnSoft} onClick={() => setView('write')}>먼저 둘러보기</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
+        {['익명 가능', 'AI 아님', '아침 답장'].map(t => (
+          <span key={t} style={{ padding: '4px 9px', borderRadius: '999px', border: `1px solid ${C.line}`, background: '#f7f0e7', fontSize: '11px', color: '#6d665d' }}>{t}</span>
+        ))}
+      </div>
+      <p style={{ marginTop: '12px', fontSize: '11px', color: C.soft }}>익명으로 시작해도 괜찮아요.</p>
+    </div>
+  );
+}
+
+// ── 글쓰기 ───────────────────────────────────
+function Write({ user, setView }) {
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const placeholder = (() => {
+    const h = new Date().getHours();
+    if (h >= 0 && h < 3) return '새벽엔 별 생각이 다 들죠.';
+    if (h >= 3 && h < 6) return '아직 안 자고 있어요?';
+    if (h >= 22) return '오늘 하루 어땠어요.';
+    return '단어 하나만 던져도 괜찮아요.';
+  })();
+
+  const handleSubmit = async () => {
+    if (!content.trim()) return;
+    const v = validateContent(content);
+    if (!v.valid) { setError(v.message); return; }
+    const last = localStorage.getItem('lastPostTime');
+    if (last && Date.now() - parseInt(last) < 60000) { setError('잠깐요! 1분에 한 번만 남길 수 있어요.'); return; }
+    if (!user) { setError('잠깐만요, 다시 시도해줘요.'); return; }
     setLoading(true);
-    const result = await getPosts();
-    if (result.success) {
-      // 24시간 지난 글 필터링 (자정 기준)
-      const now = new Date();
-      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      
-      const filteredPosts = result.posts.filter(post => {
-        if (!post.createdAt) return true;
-        
-        const postDate = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
-        const postMidnight = new Date(postDate.getFullYear(), postDate.getMonth(), postDate.getDate(), 0, 0, 0);
-        
-        // 오늘 자정과 글 작성일의 자정을 비교
-        return postMidnight.getTime() === todayMidnight.getTime();
-      });
-      
-      setPosts(filteredPosts.map((post, index) => ({
-        ...post,
-        timeAgo: getTimeAgo(post.createdAt)
-      })));
-    }
+    const result = await createThread(user.uid, content, 'text');
+    if (result.success) { localStorage.setItem('lastPostTime', Date.now().toString()); setView('done'); }
+    else setError('잠깐 문제가 생겼어요. 다시 시도해줘요.');
     setLoading(false);
   };
 
-  const loadTopics = async () => {
-    const result = await getTopics();
-    if (result.success) {
-      setTopics(result.topics);
-    }
-  };
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <span onClick={() => setView('splash')} style={{ position: 'absolute', top: '24px', left: '24px', fontSize: '11px', color: '#938a80', cursor: 'pointer' }}>← 돌아가기</span>
 
-  const loadAndSelectFeaturedPost = async () => {
-    // 오늘의 포스트잇 확인
-    const featured = await getTodaysFeaturedPost();
-    
-    if (featured.success && featured.featured) {
-      // 이미 오늘 선정된 게 있으면 사용
-      setFeaturedPostId(featured.featured.postId);
-    } else {
-      // 없으면 자동 선정 (메아리가 가장 많은 글)
-      const result = await getPosts();
-      if (result.success && result.posts.length > 0) {
-        // 오늘 작성된 글 중 메아리가 가장 많은 글 선정
-        const today = new Date();
-        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-        
-        const todaysPosts = result.posts.filter(post => {
-          if (!post.createdAt) return false;
-          const postDate = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
-          const postMidnight = new Date(postDate.getFullYear(), postDate.getMonth(), postDate.getDate(), 0, 0, 0);
-          return postMidnight.getTime() === todayMidnight.getTime();
-        });
-        
-        if (todaysPosts.length > 0) {
-          // 메아리가 가장 많은 글 선정
-          // 메아리가 가장 많은 값 찾기
-          const maxEchoes = Math.max(...todaysPosts.map(p => p.echoes || 0));
-          
-          // 같은 메아리 수를 가진 글들만 필터링
-          const topPosts = todaysPosts.filter(p => (p.echoes || 0) === maxEchoes);
-          
-          // 그 중에서 랜덤 선택
-          const selectedPost = topPosts[Math.floor(Math.random() * topPosts.length)];
-          
-          await setTodaysFeaturedPost(selectedPost.id);
-          setFeaturedPostId(selectedPost.id);
-        }
-      }
-    }
-  };
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '13px 12px', width: '100%', maxWidth: '360px', position: 'relative', boxShadow: '0 4px 12px rgba(38,37,34,.04)' }}>
+        <div style={{ position: 'absolute', top: '-6px', left: '50%', transform: 'translateX(-50%)', width: '38px', height: '11px', borderRadius: '2px', background: 'rgba(198,188,170,.52)' }} />
 
-  const getTimeAgo = (timestamp) => {
-    if (!timestamp) return '방금';
-    const now = new Date();
-    const posted = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const diff = Math.floor((now - posted) / 1000);
-    
-    if (diff < 60) return '방금';
-    if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-    return `${Math.floor(diff / 86400)}일 전`;
-  };
+        <div style={{ fontSize: '14px', fontWeight: '800', textAlign: 'center', marginBottom: '5px' }}>말 못한 게 있죠.</div>
+        <div style={{ fontSize: '10px', lineHeight: '1.7', textAlign: 'center', color: C.muted, marginBottom: '11px' }}>잘 정리되지 않아도 괜찮아요. 지금 마음 그대로 남겨도 돼요.</div>
 
-  const postitColors = [
-    { bg: '#FFF9C4', border: '#F0E68C', tape: '#F5E642' },  // 연노랑
-    { bg: '#FFE4E8', border: '#FFB3C1', tape: '#FF8FA3' },  // 연핑크
-    { bg: '#E8F5E9', border: '#B2DFDB', tape: '#80CBC4' },  // 연민트
-    { bg: '#EDE7F6', border: '#D1C4E9', tape: '#B39DDB' },  // 연보라
-    { bg: '#FFF3E0', border: '#FFE0B2', tape: '#FFCC80' },  // 연주황
-    { bg: '#E3F2FD', border: '#BBDEFB', tape: '#90CAF9' },  // 연파랑
-  ];
-
-  // 카드별 고정 랜덤값 (리렌더 시 안 바뀌게 post.id 기반)
-  const getCardMeta = (postId) => {
-    const hash = postId ? postId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) : 0;
-    const colorIdx = hash % postitColors.length;
-    const rotation = ((hash % 5) - 2) * 0.8; // -1.6 ~ 1.6도
-    return { color: postitColors[colorIdx], rotation };
-  };
-
-  const handleSubmit = async () => {
-  if (!content.trim()) return;
-  
-  // ✅ 여기에 Rate Limiting 추가
-  const lastPostTime = localStorage.getItem('lastPostTime');
-  const now = Date.now();
-  const oneMinute = 60 * 1000;
-  
-  if (lastPostTime) {
-    const timeSinceLastPost = now - parseInt(lastPostTime);
-    if (timeSinceLastPost < oneMinute) {
-      alert('잠깐요! 1분에 한 번만 남길 수 있어요.');
-      return;
-    }
-  }
-  
-  // 금칙어 검증
-  const validation = validateContent(content);
-  if (!validation.valid) {
-    alert(validation.message);
-    return;
-  }
-    
-    setShowRipple(true);
-    setTimeout(() => setShowRipple(false), 2000);
-    
-    const result = await createPost(content, false, selectedTopic); // wantDeeper 항상 false
-    
-    if (result.success) {
-    // ✅ 여기에 시간 저장 추가
-    // logEvent(analytics, 'post_created', { has_topic: selectedTopic ? true : false });
-    localStorage.setItem('lastPostTime', now.toString());
-    
-    setContent('');
-    setSelectedTopic(null);
-    await loadPosts();
-    setTimeout(() => setView('feed'), 500);
-  } else {
-      alert('글 작성에 실패했습니다. 다시 시도해주세요.');
-    }
-  };
-
-  const handleEchoClick = (post) => {
-    setEchoingPost(post);
-    setShowEchoModal(true);
-  };
-
-  const handleEchoWithMessage = async (message) => {
-    if (!echoingPost) return;
-    logEvent(analytics, 'echo_added', { echo_type: message });
-    const result = await addEchoWithMessage(
-      echoingPost.id, 
-      message, 
-      echoingPost.echoMessages || {}
-    );
-    
-    if (result.success) {
-      // 로컬 상태 업데이트
-      const updatedMessages = { ...echoingPost.echoMessages };
-      updatedMessages[message] = (updatedMessages[message] || 0) + 1;
-      const totalEchoes = Object.values(updatedMessages).reduce((sum, count) => sum + count, 0);
-      
-      setPosts(posts.map(post => 
-        post.id === echoingPost.id 
-          ? { ...post, echoes: totalEchoes, echoMessages: updatedMessages } 
-          : post
-      ));
-      
-      if (selectedPost && selectedPost.id === echoingPost.id) {
-        setSelectedPost({ 
-          ...selectedPost, 
-          echoes: totalEchoes, 
-          echoMessages: updatedMessages 
-        });
-      }
-    }
-    
-    setShowEchoModal(false);
-    setEchoingPost(null);
-  };
-
-  const getPlaceholder = () => {
-    const hour = new Date().getHours();
-    if (selectedTopic) return `"${selectedTopic}"에 대해 느낌을 남겨보세요`;
-    if (hour >= 0 && hour < 3)  return "새벽엔 별 생각이 다 들죠";
-    if (hour >= 3 && hour < 6)  return "아직 안 자고 있어요?";
-    if (hour >= 22)              return "오늘 하루 어땠어요";
-    return "단어 하나만 던져도 괜찮아요";
-  };
-
-  const handleAddComment = async (postId, commentText) => {
-    if (!commentText.trim()) return;
-    
-    // 금칙어 검증
-    const validation = validateContent(commentText);
-    if (!validation.valid) {
-      alert(validation.message);
-      return;
-    }
-    
-    const post = posts.find(p => p.id === postId);
-    
-    const result = await addComment(postId, commentText, post.comments);
-    
-    if (result.success) {
-      const updatedPosts = posts.map(p => 
-        p.id === postId 
-          ? { ...p, comments: [...p.comments, result.comment] }
-          : p
-      );
-      setPosts(updatedPosts);
-      
-      if (selectedPost && selectedPost.id === postId) {
-        setSelectedPost({
-          ...selectedPost,
-          comments: [...selectedPost.comments, result.comment]
-        });
-      }
-      
-      // AI 응답 제거 - 사람끼리만 대화
-    }
-  };
-
-  // 3턴 대화 계속하기
-  const sortedPosts = [...posts].sort((a, b) => {
-    if (sortBy === '최신순') {
-      return 0;
-    } else {
-      return b.echoes - a.echoes;
-    }
-  });
-
-  const EchoIcon = ({ count = 0, className = "" }) => {
-    if (count === 0) {
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-          <circle cx="12" cy="12" r="3" fill="currentColor"/>
-        </svg>
-      );
-    } else if (count <= 3) {
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-          <circle cx="12" cy="12" r="7" opacity="0.5"/>
-          <circle cx="12" cy="12" r="3" fill="currentColor"/>
-        </svg>
-      );
-    } else if (count <= 10) {
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-          <circle cx="12" cy="12" r="10" opacity="0.3"/>
-          <circle cx="12" cy="12" r="7" opacity="0.5"/>
-          <circle cx="12" cy="12" r="3" fill="currentColor"/>
-        </svg>
-      );
-    } else {
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`${className} animate-pulse`}>
-          <circle cx="12" cy="12" r="10" opacity="0.3"/>
-          <circle cx="12" cy="12" r="7" opacity="0.5"/>
-          <circle cx="12" cy="12" r="3" fill="currentColor"/>
-        </svg>
-      );
-    }
-  };
-
-  const PostCard = ({ post, onClick, index, isFeatured = false }) => {
-    const { color, rotation } = getCardMeta(post.id);
-
-    const cardStyle = isFeatured
-      ? {
-          background: 'linear-gradient(135deg, #FBF8F3 0%, #F5F1E8 100%)',
-          border: '3px solid #D4A574',
-          boxShadow: '6px 6px 20px rgba(212,165,116,0.35)',
-          transform: 'rotate(0deg)',
-        }
-      : {
-          background: color.bg,
-          border: `2px solid ${color.border}`,
-          boxShadow: `3px 3px 10px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)`,
-          transform: `rotate(${rotation}deg)`,
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        };
-
-    return (
-      <div
-        onClick={onClick}
-        className="rounded-sm p-5 cursor-pointer relative group"
-        style={cardStyle}
-        onMouseEnter={(e) => {
-          if (!isFeatured) {
-            e.currentTarget.style.transform = `rotate(0deg) scale(1.03)`;
-            e.currentTarget.style.boxShadow = `6px 6px 18px rgba(0,0,0,0.15)`;
-            e.currentTarget.style.zIndex = '10';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isFeatured) {
-            e.currentTarget.style.transform = `rotate(${rotation}deg) scale(1)`;
-            e.currentTarget.style.boxShadow = `3px 3px 10px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)`;
-            e.currentTarget.style.zIndex = '1';
-          }
-        }}
-      >
-        {/* 테이프 */}
-        <div
-          className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-14 h-5 rounded-sm opacity-70"
-          style={{
-            background: isFeatured ? '#E8D5B0' : color.tape,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-          }}
+        <textarea
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          placeholder={placeholder}
+          rows={7}
+          style={{ width: '100%', background: '#f8f2e8', border: `1px solid ${C.line}`, borderRadius: '9px', padding: '10px', fontSize: '12px', lineHeight: '1.75', color: '#4d4943', resize: 'none', outline: 'none', fontFamily: "'Noto Sans KR', sans-serif", marginBottom: '8px' }}
         />
 
-        <div className="relative z-10 mt-1">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-700">{post.author}</span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-400">{post.timeAgo}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {post.topic && (
-                <div className="flex items-center gap-1 text-xs text-amber-700 bg-white/60 px-2 py-0.5 rounded-full border border-amber-200">
-                  <span>💭 {post.topic}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <p className="text-gray-800 mb-4 line-clamp-3 leading-loose" style={{fontFamily: "'Jua', sans-serif", fontSize: '1.35rem'}}>{post.content}</p>
-
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEchoClick(post);
-              }}
-              className="flex items-center gap-1.5 hover:text-amber-600 transition-colors group/echo"
-            >
-              <div className="relative">
-                <EchoIcon count={post.echoes} />
-                <div className="absolute inset-0 scale-0 group-hover/echo:scale-150 opacity-0 group-hover/echo:opacity-30 transition-all duration-500">
-                  <EchoIcon count={post.echoes} />
-                </div>
-              </div>
-              <span className="font-bold">{post.echoes > 0 ? `${post.echoes}명이 받았어요` : '메아리 보내기'}</span>
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              <MessageCircle size={18} />
-              <span className="font-bold">{post.comments?.length || 0}개의 울림</span>
-            </div>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9b9287', marginBottom: '10px' }}>
+          <span>이름 없이 남길 수 있어요</span>
+          <span>{content.length} / 500</span>
         </div>
-      </div>
-    );
-  };
 
-  const PostDetail = ({ post, onClose }) => {
-    const [localComment, setLocalComment] = useState('');
-    
-    const handleSubmitComment = () => {
-      if (localComment.trim()) {
-        handleAddComment(post.id, localComment);
-        setLocalComment('');
-      }
-    };
-    
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white border-b border-gray-100 p-4 md:p-6 z-10">
-            <button 
-              onClick={onClose}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-base font-medium bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-              돌아가기
-            </button>
-          </div>
-          
-          <div className="p-4 md:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm font-bold text-gray-800">{post.author}</span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-400">{post.timeAgo}</span>
-              {post.topic && (
-                <div className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-full ml-2 border border-blue-200">
-                  <span>💭 {post.topic}</span>
-                </div>
-              )}
-              {post.wantDeeper && (
-                <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full ml-2 border border-purple-200">
-                  <span>🔮 깊게 들어줘</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="rounded-xl p-4 mb-6" style={{
-              background: '#FFFEF5',
-              border: '1.5px solid #E8E0C8',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-            }}>
-              <p className="text-gray-900 whitespace-pre-wrap leading-loose" style={{fontFamily: "'Jua', sans-serif", fontSize: '1.45rem'}}>{post.content}</p>
-            </div>
-            
-            <div className="mb-6 pb-6 border-b">
-              <button 
-                onClick={() => handleEchoClick(post)}
-                className="flex items-center gap-1.5 hover:text-purple-600 transition-colors mb-3"
-              >
-                <EchoIcon count={post.echoes} />
-                <span className="font-bold text-sm text-gray-700">{post.echoes > 0 ? `${post.echoes}명이 받았어요` : '메아리 보내기'}</span>
-              </button>
-              
-              {/* 메아리 상세 표시 */}
-              {post.echoMessages && Object.keys(post.echoMessages).length > 0 && (
-                <div className="space-y-2 mt-3">
-                  {(() => {
-                    const total = Object.values(post.echoMessages).reduce((sum, c) => sum + c, 0);
-                    return Object.entries(post.echoMessages)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([msg, count]) => {
-                        const option = echoMessageOptions.find(o => o.label === msg);
-                        const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-                        return (
-                          <div key={msg}>
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-base">{option?.emoji || '🤍'}</span>
-                                <span className="text-sm font-bold" style={{color: '#4A3F35'}}>{msg}</span>
-                              </div>
-                              <span className="text-xs font-bold" style={{color: '#8B7355'}}>{count}명 · {percent}%</span>
-                            </div>
-                            <div className="w-full rounded-full h-2" style={{background: '#E8E0D5'}}>
-                              <div
-                                className="h-2 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${percent}%`,
-                                  background: 'linear-gradient(to right, #E0C9A8, #D4A574)'
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      });
-                  })()}
-                </div>
-              )}
-            </div>
-            
-            <div className="mb-4">
-              <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <MessageCircle size={16} style={{color: '#D4A574'}} />
-                울림 {post.comments?.length || 0}개
-              </h3>
-            </div>
-            
-            <div className="space-y-3 mb-6">
-              {(post.comments || []).map((comment, idx) => (
-                <div key={idx} className="rounded-xl p-4 border" style={{background: '#FBF8F3', borderColor: '#E8E0D5'}}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-bold text-gray-800">{comment.author}</span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-400">
-                      {comment.time || getTimeAgo(comment.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-gray-800 text-sm leading-relaxed">{comment.content}</p>
-                </div>
-              ))}
-            </div>
-            
-            <div className="space-y-3">
-              <label className="block text-sm font-bold text-gray-800">울림 남기기</label>
-              <textarea
-                value={localComment}
-                onChange={(e) => setLocalComment(e.target.value)}
-                placeholder="울림을 남겨주세요"
-                className="w-full p-4 border-2 rounded-xl focus:outline-none focus:ring-2 resize-none"
-                style={{
-                  backgroundColor: '#FBF8F3',
-                  borderColor: '#E8E0D5',
-                  color: '#4A3F35'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#D4A574';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,165,116,0.1)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E8E0D5';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                rows="3"
-              />
-              <button
-                onClick={handleSubmitComment}
-                className="w-full text-white py-3 rounded-xl transition-all font-bold shadow-md hover:shadow-lg"
-                style={{
-                  background: 'linear-gradient(to right, #E0C9A8, #D4A574)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(to right, #D4A574, #C9A875)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(to right, #E0C9A8, #D4A574)';
-                }}
-              >
-                울림 보내기
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+        {error && <p style={{ fontSize: '11px', color: '#d4433a', marginBottom: '8px', textAlign: 'center' }}>{error}</p>}
 
-  if (showAdmin) {
-    return <Admin onBack={() => setShowAdmin(false)} />;
-  }
-
-  return (
-    <div className="min-h-screen relative flex flex-col" style={{
-      background: 'radial-gradient(ellipse 800px 600px at 50% 0%, #F5F1E8 0%, #E8E0D5 40%, #D9CFC0 100%)'
-    }}>
-      {/* 공감 메시지 선택 모달 */}
-      {showEchoModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowEchoModal(false)}
+        <button
+          style={{ ...btnFill, opacity: (!content.trim() || loading) ? 0.5 : 1 }}
+          onClick={handleSubmit}
+          disabled={!content.trim() || loading}
         >
-          <div 
-            className="rounded-2xl p-6 max-w-md w-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#FBF8F3',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-            }}
-          >
-            <h3 className="text-xl font-black mb-2 text-center" style={{color: '#4A3F35'}}>
-              메아리를 보내요
-            </h3>
-            <p className="text-xs text-center mb-5 font-medium" style={{color: '#8B7355'}}>
-              이 글을 읽고 어떤 마음이 들었나요?
-            </p>
-            <div className="space-y-2">
-              {echoMessageOptions.map((option) => (
-                <button
-                  key={option.label}
-                  onClick={() => handleEchoWithMessage(option.label)}
-                  className="w-full py-3 px-4 rounded-xl transition-all font-bold flex items-center gap-3"
-                  style={{
-                    background: '#F5F1E8',
-                    color: '#4A3F35',
-                    border: '2px solid #E8E0D5',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#E8E0D5';
-                    e.currentTarget.style.transform = 'scale(1.02)';
-                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(212,165,116,0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#F5F1E8';
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-                  }}
-                >
-                  <span className="text-2xl">{option.emoji}</span>
-                  <div className="text-left">
-                    <div className="font-black text-sm" style={{color: '#4A3F35'}}>{option.label}</div>
-                    <div className="text-xs font-medium" style={{color: '#8B7355'}}>{option.desc}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowEchoModal(false)}
-              className="w-full mt-4 text-sm font-medium"
-              style={{color: '#8B7355'}}
-            >
-              취소
-            </button>
-          </div>
+          {loading ? '남기는 중...' : '남기기'}
+        </button>
+
+        <div style={{ marginTop: '9px', fontSize: '10px', lineHeight: '1.65', textAlign: 'center', color: '#9a9186' }}>
+          이름 없이 남고 · 하루가 지나면 사라져요.
+          {(!user || user.isAnonymous) && (
+            <><br /><span
+              onClick={() => setView('login')}
+              style={{ textDecoration: 'underline', color: '#888', cursor: 'pointer' }}
+            >로그인하면 내 이야기와 공간이 생겨요.</span></>
+          )}
         </div>
-      )}
-      <div className="fixed inset-0 pointer-events-none opacity-10">
-        <svg className="absolute top-20 left-10 w-64 h-64 animate-pulse-slow">
-          <circle cx="128" cy="128" r="100" fill="none" stroke="#D4A574" strokeWidth="1"/>
-          <circle cx="128" cy="128" r="70" fill="none" stroke="#D4A574" strokeWidth="1"/>
-          <circle cx="128" cy="128" r="40" fill="none" stroke="#D4A574" strokeWidth="1"/>
-        </svg>
-        <svg className="absolute bottom-20 right-10 w-96 h-96 animate-pulse-slow" style={{animationDelay: '1s'}}>
-          <circle cx="192" cy="192" r="150" fill="none" stroke="#C9A875" strokeWidth="1"/>
-          <circle cx="192" cy="192" r="110" fill="none" stroke="#C9A875" strokeWidth="1"/>
-          <circle cx="192" cy="192" r="70" fill="none" stroke="#C9A875" strokeWidth="1"/>
-        </svg>
       </div>
-
-      {showRipple && (
-        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-          <div className="relative w-96 h-96">
-            <div className="absolute inset-0 rounded-full opacity-30 animate-ripple-out" style={{backgroundColor: '#D4A574'}}/>
-            <div className="absolute inset-0 rounded-full opacity-20 animate-ripple-out" style={{backgroundColor: '#C9A875', animationDelay: '0.3s'}}/>
-            <div className="absolute inset-0 rounded-full opacity-10 animate-ripple-out" style={{backgroundColor: '#BEA070', animationDelay: '0.6s'}}/>
-          </div>
-        </div>
-      )}
-
-      <header className={`bg-white/80 backdrop-blur-sm shadow-sm fixed top-0 left-0 right-0 z-40 border-b-2 transition-all ${selectedPost ? 'hidden' : ''}`} style={{borderColor: '#E8E0D5'}}>
-        <div className="max-w-6xl mx-auto px-4 py-2.5 md:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="relative hidden md:block">
-                <StickyNote className="w-7 h-7 md:w-10 md:h-10" style={{color: '#D4A574'}} />
-                <div className="absolute inset-0 animate-ping opacity-20">
-                  <StickyNote className="w-7 h-7 md:w-10 md:h-10" style={{color: '#D4A574'}} />
-                </div>
-              </div>
-              <div className="cursor-pointer" onClick={() => setView('feed')}>
-                <h1 className="text-lg md:text-2xl" style={{
-                      background: 'linear-gradient(to right, #D4A574, #C9A875)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      fontFamily: "'Do Hyeon', sans-serif",
-                      fontWeight: '900',
-                      lineHeight: '1.2'
-                    }}>
-                  마인드포스팃
-                </h1>
-                <p className="hidden md:block text-xs font-medium" style={{color: '#8B7355'}}>오늘 다 내려놓고, 내일은 가볍게요</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* 접속자 수: 모바일은 축약, PC는 풀텍스트 */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold"
-                style={{background: 'rgba(212,165,116,0.15)', color: '#8B7355', border: '1px solid rgba(212,165,116,0.3)'}}>
-                <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{background: '#D4A574'}}/>
-                <span className="md:hidden">🌙 {onlineCount}명</span>
-                <span className="hidden md:inline">지금 {onlineCount}명이 깨어있어요</span>
-              </div>
-              <button
-                onClick={() => setView(view === 'feed' ? 'write' : 'feed')}
-                className="text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full transition-all font-bold shadow-md hover:shadow-lg text-sm md:text-base"
-                style={{background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'}}
-              >
-                {view === 'feed' ? '📝 남기기' : '📋 메아리'}
-              </button>
-              <button
-                onClick={() => setShowAdmin(true)}
-                className="p-2 transition-all"
-                style={{color: '#8B7355'}}
-                title="관리자"
-              >
-                <Shield size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-6xl mx-auto px-4 pt-24 md:pt-28 pb-6 md:pb-8 relative z-10 w-full">
-        {view === 'feed' ? (
-          <>
-            <div className="mb-6 flex justify-center">
-              <div className="inline-flex bg-white/80 backdrop-blur-sm rounded-full p-1 shadow-md border-2" style={{borderColor: '#E8E0D5'}}>
-                {['최신순', '메아리순'].map((sortOption) => (
-                  <button
-                    key={sortOption}
-                    onClick={() => setSortBy(sortOption)}
-                    className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
-                      sortBy === sortOption
-                        ? 'text-white shadow-md'
-                        : ''
-                    }`}
-                    style={sortBy === sortOption ? {
-                      background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
-                    } : {
-                      color: '#6B5D4F'
-                    }}
-                  >
-                    {sortOption}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-8">
-              {/* 피드 헤더는 글이 있을 때만 표시 */}
-              {!loading && posts.length > 0 && (
-                <div className="text-center mb-6 md:mb-8">
-                  <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>지금 떠오른 생각들</h2>
-                  <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 되는 생각들 🌙</p>
-                  <p className="text-xs font-bold mt-2" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져요</p>
-                </div>
-              )}
-              
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent" style={{borderColor: '#D4A574'}}></div>
-                  <p className="mt-4" style={{color: '#6B5D4F'}}>마음들을 불러오고 있어요...</p>
-                </div>
-              ) : posts.length === 0 ? (
-                <div className="max-w-md mx-auto text-center py-16 px-6">
-                  {/* 상단 문구 */}
-                  <div className="mb-8 space-y-3">
-                    <h3 className="text-2xl md:text-3xl font-black leading-tight" style={{color: '#4A3F35'}}>
-                      지금 떠오른 생각들
-                    </h3>
-                    <p className="text-base md:text-lg font-medium" style={{color: '#6B5D4F'}}>
-                      정리되지 않아도 되는 생각들 🌙
-                    </p>
-                    <p className="text-sm font-medium" style={{color: '#8B7355'}}>
-                      하루가 지나면 사라져요
-                    </p>
-                  </div>
-                  
-                  {/* 중간 문구 */}
-                  <div className="mb-6">
-                    <p className="text-lg font-bold" style={{color: '#6B5D4F'}}>
-                      지금은 조용한 시간
-                    </p>
-                  </div>
-                  
-                  {/* 버튼 */}
-                  <button
-                    onClick={() => setView('write')}
-                    className="text-white px-8 py-4 rounded-full transition-all font-black text-lg shadow-lg hover:shadow-xl mb-8"
-                    style={{
-                      background: 'linear-gradient(to right, #E0C9A8, #D4A574)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to right, #D4A574, #C9A875)';
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to right, #E0C9A8, #D4A574)';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                  >
-                    여기 남기기
-                  </button>
-                  
-                  {/* 하단 정체성 문구 */}
-                  <div className="space-y-2 pt-6 border-t-2" style={{borderColor: '#E8E0D5'}}>
-                    <p className="text-sm font-bold" style={{color: '#4A3F35'}}>
-                      하루 뒤 사라지는 익명 공간이에요
-                    </p>
-                    <p className="text-xs font-medium" style={{color: '#6B5D4F'}}>
-                      로그인 없이, 이름 없이
-                    </p>
-                    <p className="text-xs font-bold" style={{color: '#D4A574'}}>
-                      매일 자정에 비워져요
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* 오늘의 포스트잇 */}
-                  {featuredPostId && sortedPosts.find(p => p.id === featuredPostId) && (
-                    <div className="mb-10">
-                      {/* 배경 강조 영역 */}
-                      <div className="relative rounded-2xl p-6 md:p-8"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(212,165,116,0.15) 0%, rgba(201,168,117,0.08) 100%)',
-                          border: '1.5px solid rgba(212,165,116,0.35)',
-                        }}>
-                        {/* 타이틀 */}
-                        <div className="flex items-center justify-center gap-2 mb-5">
-                          <div className="h-px flex-1" style={{background: 'linear-gradient(to right, transparent, rgba(212,165,116,0.5))'}}/>
-                          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
-                            style={{background: 'rgba(212,165,116,0.2)', border: '1px solid rgba(212,165,116,0.4)'}}>
-                            <span className="text-base">📌</span>
-                            <span className="text-sm font-black" style={{color: '#B8874E'}}>오늘의 포스팃</span>
-                          </div>
-                          <div className="h-px flex-1" style={{background: 'linear-gradient(to left, transparent, rgba(212,165,116,0.5))'}}/>
-                        </div>
-                        {/* 카드 */}
-                        <div className="max-w-xl mx-auto">
-                          <PostCard
-                            post={sortedPosts.find(p => p.id === featuredPostId)}
-                            index={-1}
-                            onClick={() => setSelectedPost(sortedPosts.find(p => p.id === featuredPostId))}
-                            isFeatured={true}
-                          />
-                        </div>
-                        {/* 하단 문구 */}
-                        {(() => {
-                          const fp = sortedPosts.find(p => p.id === featuredPostId);
-                          const echoCount = fp?.echoes || 0;
-                          return (
-                            <p className="text-center text-xs mt-4 font-medium" style={{color: '#A89070'}}>
-                              {echoCount > 0
-                                ? `${echoCount}명이 메아리를 보냈어요`
-                                : '오늘의 포스팃이에요'}
-                            </p>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                    {sortedPosts.filter(post => post.id !== featuredPostId).map((post, index) => (
-                      <PostCard 
-                        key={post.id} 
-                        post={post}
-                        index={index}
-                        onClick={() => setSelectedPost(post)}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            
-            {selectedPost && (
-              <PostDetail 
-                post={selectedPost} 
-                onClose={() => {
-                  setSelectedPost(null);
-                }}
-              />
-            )}
-          </>
-        ) : (
-          <div className="max-w-2xl mx-auto">
-            <div className="border-2 rounded-2xl p-6 md:p-8 shadow-xl relative"
-                 style={{
-                   background: '#FBF8F3',
-                   borderColor: '#E8E0D5',
-                   boxShadow: '8px 8px 16px rgba(0,0,0,0.1)'
-                 }}>
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-20 h-8 bg-white/50 rounded-sm" 
-                   style={{boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
-              
-              <div className="text-center mb-6">
-                <h2 className="text-xl md:text-2xl font-black mb-2" style={{color: '#4A3F35'}}>잠 못 드는 밤 🌙</h2>
-                <p className="text-sm md:text-base font-medium" style={{color: '#6B5D4F'}}>정리되지 않아도 괜찮아요. 하루가 지나면 사라져요.</p>
-              </div>
-              
-              {/* 주제 선택 */}
-              {topics.length > 0 && (
-                <div className="mb-5">
-                  <label className="block text-sm font-bold mb-3" style={{color: '#4A3F35'}}>
-                    💭 오늘의 주제를 선택해보세요 (선택사항)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setSelectedTopic(null)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        selectedTopic === null
-                          ? 'text-white shadow-md'
-                          : 'bg-white/60 hover:bg-white border-2'
-                      }`}
-                      style={selectedTopic === null ? {
-                        background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
-                      } : {
-                        color: '#6B5D4F',
-                        borderColor: '#D9CFC0'
-                      }}
-                    >
-                      자유 주제
-                    </button>
-                    {topics.map((topic) => (
-                      <button
-                        key={topic.id}
-                        onClick={() => setSelectedTopic(topic.text)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                          selectedTopic === topic.text
-                            ? 'text-white shadow-md'
-                            : 'bg-white/60 hover:bg-white border-2'
-                        }`}
-                        style={selectedTopic === topic.text ? {
-                          background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
-                        } : {
-                          color: '#6B5D4F',
-                          borderColor: '#D9CFC0'
-                        }}
-                      >
-                        {topic.text}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder={getPlaceholder()}
-                className="w-full p-4 md:p-5 border-2 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent mb-5 resize-none font-medium"
-                style={{
-                  backgroundColor: '#FBF8F3',
-                  borderColor: '#E8E0D5',
-                  color: '#4A3F35'
-                }}
-                rows="8"
-              />
-              
-              
-              <button
-                onClick={handleSubmit}
-                disabled={!content.trim()}
-                className="w-full text-white py-3 md:py-4 rounded-xl disabled:cursor-not-allowed transition-all font-black text-base md:text-lg shadow-lg hover:shadow-xl"
-                style={!content.trim() ? {
-                  background: '#C9C4BD',
-                  cursor: 'not-allowed'
-                } : {
-                  background: 'linear-gradient(to right, #E0C9A8, #DBC5A5)'
-                }}
-              >
-                남기기
-              </button>
-              <div className="text-center mt-3 space-y-1">
-                <p className="text-xs md:text-sm font-medium" style={{color: '#6B5D4F'}}>이름 없이 남고</p>
-                <p className="text-xs font-bold" style={{color: '#D4A574'}}>⏰ 하루가 지나면 사라져요</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white/50 backdrop-blur-sm py-6 border-t" style={{borderColor: '#E8E0D5'}}>
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <button
-            onClick={() => setShowTerms(true)}
-            className="text-sm transition-colors underline hover:no-underline font-medium"
-            style={{color: '#8B7355'}}
-          >
-            이용약관
-          </button>
-          <p className="text-xs mt-3 font-medium" style={{color: '#A89885'}}>© 2026 마인드포스팃. 새벽의 익명 공간</p>
-        </div>
-      </footer>
-
-      {/* Terms Modal */}
-      {showTerms && <Terms onClose={() => setShowTerms(false)} />}
-
-      <style>{`
-        /* 종이 질감 효과 */
-        body::before {
-          content: '';
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          opacity: 0.03;
-          z-index: 1;
-          pointer-events: none;
-          background-image: 
-            repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
-            repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-        }
-        
-        @keyframes ripple-out {
-          0% { transform: scale(0); opacity: 0.6; }
-          100% { transform: scale(4); opacity: 0; }
-        }
-        
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.15; transform: scale(1); }
-          50% { opacity: 0.25; transform: scale(1.05); }
-        }
-        
-        .animate-ripple-out {
-          animation: ripple-out 2s ease-out forwards;
-        }
-        
-        .animate-pulse-slow {
-          animation: pulse-slow 4s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
-};
+}
 
-export default App;
+// ── 전송 완료 ────────────────────────────────
+function Done({ setView }) {
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <div style={{ width: '130px', margin: '0 auto 16px', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '12px 10px', transform: 'rotate(-2deg)', position: 'relative', boxShadow: '0 4px 10px rgba(38,37,34,.06)' }}>
+        <div style={{ position: 'absolute', top: '-6px', left: '50%', transform: 'translateX(-50%)', width: '38px', height: '11px', borderRadius: '2px', background: 'rgba(198,188,170,.52)' }} />
+        <p style={{ fontSize: '11px', lineHeight: '1.7', color: '#5a554e' }}>방금 남긴 이야기가 안전하게 전달됐어요.</p>
+        <small style={{ display: 'block', marginTop: '6px', fontSize: '9px', color: '#b0a79c' }}>{new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · 오늘</small>
+      </div>
+
+      <h2 style={{ fontSize: '20px', fontWeight: '900', textAlign: 'center', letterSpacing: '-.02em', marginBottom: '6px' }}>남겨줘서 고마워요.</h2>
+      <p style={{ fontSize: '12px', lineHeight: '1.75', textAlign: 'center', color: C.muted, marginBottom: '14px' }}>
+        오늘 밤 남긴 이야기는<br />아침 6–7시에 차분히 읽고<br />짧게 답장을 남겨둘게요.
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '16px', width: '100%', maxWidth: '280px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.ink, flexShrink: 0 }} />
+        <div style={{ flex: 1, height: '1px', background: '#d7cec1' }} />
+        <span style={{ fontSize: '10px', color: '#6e665c', fontWeight: '700', whiteSpace: 'nowrap' }}>답장 예정</span>
+        <div style={{ flex: 1, height: '1px', background: '#d7cec1' }} />
+        <span style={{ fontSize: '10px', color: '#9a9086', whiteSpace: 'nowrap' }}>06–07시</span>
+      </div>
+
+      <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        <button style={btnFill} onClick={() => setView('signup')}>회원가입하고 답장 받기</button>
+        <button style={btnOutline} onClick={() => setView('login')}>이미 계정이 있어요</button>
+        <button style={btnSoft} onClick={() => setView('splash')}>처음으로</button>
+      </div>
+
+      <p style={{ marginTop: '12px', fontSize: '10px', lineHeight: '1.65', textAlign: 'center', color: '#9a9186' }}>AI가 아니라, 진짜 사람이 직접 읽고 남기는 답장이에요.</p>
+    </div>
+  );
+}
+
+// ── 로그인 ───────────────────────────────────
+function Login({ setView, setUser }) {
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+
+  const doLogin = async () => {
+    if (!email || !pw) { setError('이메일과 비밀번호를 입력해줘요.'); return; }
+    setLoading(true); setError('');
+    const r = await signInWithEmail(email, pw);
+    if (r.success) { setUser(r.user); setView('home'); }
+    else setError(r.message);
+    setLoading(false);
+  };
+
+  const doReset = async () => {
+    if (!email) { setError('이메일을 먼저 입력해줘요.'); return; }
+    const r = await resetPassword(email);
+    if (r.success) setResetSent(true);
+    else setError('비밀번호 재설정 이메일 전송에 실패했어요.');
+  };
+
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <button onClick={() => setView('done')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
+        <div style={{ fontSize: '15px', fontWeight: '800', lineHeight: '1.45', marginBottom: '4px' }}>답장을 놓치지 않으려면</div>
+        <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.muted, marginBottom: '14px' }}>로그인하면 사람이 직접 남긴 답장을 놓치지 않고, 내 이야기와 답장이 내 공간에 남아요.</div>
+
+        <div style={{ marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>이메일</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="hello@email.com" style={inputStyle} />
+        </div>
+        <div style={{ marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>비밀번호</label>
+          <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" style={inputStyle} onKeyDown={e => e.key === 'Enter' && doLogin()} />
+        </div>
+        <div style={{ textAlign: 'right', marginBottom: '12px' }}>
+          <button onClick={doReset} style={{ fontSize: '10px', color: '#aba295', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}>비밀번호 찾기</button>
+        </div>
+
+        {resetSent && <p style={{ fontSize: '11px', color: '#2a7a2a', marginBottom: '8px', textAlign: 'center' }}>재설정 이메일을 보냈어요.</p>}
+        {error && <p style={{ fontSize: '11px', color: '#d4433a', marginBottom: '8px', textAlign: 'center' }}>{error}</p>}
+
+        <button style={{ ...btnFill, opacity: loading ? 0.6 : 1, marginBottom: '12px' }} onClick={doLogin} disabled={loading}>{loading ? '로그인 중...' : '로그인'}</button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+          <div style={{ flex: 1, height: '1px', background: '#d8cfc3' }} />
+          <span style={{ fontSize: '10px', color: '#aba295' }}>처음이라면</span>
+          <div style={{ flex: 1, height: '1px', background: '#d8cfc3' }} />
+        </div>
+        <button style={{ ...btnOutline, marginBottom: '12px' }} onClick={() => setView('signup')}>회원가입</button>
+
+        <div style={{ background: '#f9f3eb', border: `1px solid ${C.line}`, borderRadius: '11px', padding: '9px 10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px' }}>가입하면 달라지는 것</div>
+          <div style={{ fontSize: '10px', lineHeight: '1.65', color: '#7d756b' }}>답장 확인 · 대화 보관 · 이어서 남기기</div>
+          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+            {[['답장', '아침 확인'], ['기록', '내 공간 저장']].map(([k, v]) => (
+              <div key={k} style={{ flex: 1, padding: '6px 8px', borderRadius: '9px', border: '1px solid #e1d6c9', background: '#fffaf3' }}>
+                <div style={{ fontSize: '9px', color: '#978d82' }}>{k}</div>
+                <div style={{ fontSize: '12px', fontWeight: '800', marginTop: '1px', color: '#33312e' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 회원가입 ─────────────────────────────────
+function Signup({ setView, setUser }) {
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const doSignup = async () => {
+    if (!email || !pw) { setError('이메일과 비밀번호를 입력해줘요.'); return; }
+    if (pw !== pw2) { setError('비밀번호가 일치하지 않아요.'); return; }
+    if (pw.length < 6) { setError('비밀번호는 6자 이상이어야 해요.'); return; }
+    setLoading(true); setError('');
+    const r = await signUpWithEmail(email, pw);
+    if (r.success) { setUser(r.user); setView('home'); }
+    else setError(r.message);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <button onClick={() => setView('login')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
+        <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>처음이군요.</div>
+        <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.muted, marginBottom: '14px' }}>닉네임 없이, 이메일만으로 충분해요.</div>
+
+        {[['이메일', 'email', email, setEmail, 'hello@email.com'], ['비밀번호', 'password', pw, setPw, '6자 이상'], ['비밀번호 확인', 'password', pw2, setPw2, '한 번 더']].map(([label, type, val, setter, ph]) => (
+          <div key={label} style={{ marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>{label}</label>
+            <input type={type} value={val} onChange={e => setter(e.target.value)} placeholder={ph} style={inputStyle} onKeyDown={e => e.key === 'Enter' && doSignup()} />
+          </div>
+        ))}
+
+        {error && <p style={{ fontSize: '11px', color: '#d4433a', margin: '8px 0', textAlign: 'center' }}>{error}</p>}
+
+        <button style={{ ...btnFill, marginTop: '6px', opacity: loading ? 0.6 : 1 }} onClick={doSignup} disabled={loading}>{loading ? '가입 중...' : '가입하기'}</button>
+        <p style={{ fontSize: '10px', color: '#9a9186', textAlign: 'center', marginTop: '10px' }}>가입하면 이용약관에 동의한 것으로 간주돼요.</p>
+      </div>
+    </div>
+  );
+}
+
+// ── 홈 ───────────────────────────────────────
+function Home({ user, setView, setUser, goThread }) {
+  const [threads, setThreads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeUserThreads(user.uid, (t) => { setThreads(t); setLoading(false); });
+  }, [user]);
+
+  const doLogout = async () => { await logOut(); setUser(null); setView('splash'); };
+
+  const hasReplied = threads.some(t => t.status === 'replied');
+  const hasWaiting = threads.some(t => t.status === 'waiting');
+
+  const banner = hasReplied
+    ? { style: { background: '#272725' }, title: '답장이 도착했어요.', sub: '어젯밤 이야기를 읽고 답장을 남겼어요.', tc: '#f8f4ed', sc: '#c8bfb1' }
+    : hasWaiting
+    ? { style: { background: '#f4ede4', border: `1px dashed #d3c9bd` }, title: '받았어요.', sub: '아침 6–7시에 차분히 읽고 답장을 남길게요.', tc: '#5a5349', sc: '#8a8278' }
+    : { style: { background: 'linear-gradient(180deg,#fcf8f2 0%,#f4ebdf 100%)', border: `1px solid ${C.line}` }, title: '오늘 하루 어땠어요?', sub: '여기다 두고 가도 괜찮아요.', tc: '#403c37', sc: '#7d756b' };
+
+  return (
+    <div style={{ ...pageStyle, padding: '18px 18px 40px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto 14px' }}>
+        <span style={{ fontSize: '12px', fontWeight: '900', letterSpacing: '.14em', color: '#847b71' }}>마인드포스팃</span>
+        <button onClick={doLogout} style={{ fontSize: '10px', color: '#a39a8f', background: 'none', border: 'none', cursor: 'pointer' }}>로그아웃</button>
+      </div>
+
+      <div style={{ maxWidth: '380px', margin: '0 auto' }}>
+        <div style={{ ...banner.style, borderRadius: '10px', padding: '10px 12px', marginBottom: '10px' }}>
+          <p style={{ fontSize: '13px', fontWeight: '800', marginBottom: '3px', color: banner.tc }}>{banner.title}</p>
+          <p style={{ fontSize: '11px', lineHeight: '1.65', color: banner.sc }}>{banner.sub}</p>
+        </div>
+
+        {loading ? (
+          <p style={{ fontSize: '12px', color: C.soft, textAlign: 'center', padding: '24px 0' }}>불러오는 중...</p>
+        ) : threads.length === 0 ? (
+          <p style={{ fontSize: '13px', fontWeight: '300', color: C.soft, textAlign: 'center', padding: '32px 0' }}>아직 남긴 이야기가 없어요.</p>
+        ) : threads.map(t => {
+          const isReplied = t.status === 'replied';
+          return (
+            <div key={t.id} onClick={() => goThread(t)} style={{ background: C.paper, border: `1px solid ${isReplied ? '#272725' : C.line}`, borderRadius: '11px', padding: '10px 11px', marginBottom: '7px', cursor: 'pointer', position: 'relative', boxShadow: '0 3px 8px rgba(38,37,34,.03)' }}>
+              <div style={{ position: 'absolute', top: '-5px', left: '14px', width: '30px', height: '9px', borderRadius: '2px', background: 'rgba(198,188,170,.52)' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '9px', color: '#ada497' }}>{fmt(t.updatedAt)}</span>
+                <span style={{ fontSize: '9px', fontWeight: '700', padding: '2px 6px', borderRadius: '999px', background: isReplied ? '#272725' : '#f4ede4', color: isReplied ? '#f8f4ed' : '#878075', border: isReplied ? 'none' : `1px dashed #d3c9bd` }}>
+                  {isReplied ? '답장 도착' : '받았어요'}
+                </span>
+              </div>
+              <p style={{ fontSize: '13px', fontWeight: '300', color: '#2b2a28', lineHeight: '1.7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.lastMessage}</p>
+            </div>
+          );
+        })}
+
+        <button style={{ ...btnFill, marginTop: '12px' }} onClick={() => setView('write')}>오늘도 남기기</button>
+      </div>
+    </div>
+  );
+}
+
+// ── 대화 스레드 ──────────────────────────────
+function Thread({ thread, setView }) {
+  const [msgs, setMsgs] = useState([]);
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    if (!thread) return;
+    return subscribeMessages(thread.id, (m) => { setMsgs(m); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); });
+  }, [thread]);
+
+  const send = async () => {
+    if (!content.trim()) return;
+    setLoading(true);
+    await addMessage(thread.id, content, 'user');
+    setContent('');
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ ...pageStyle, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.line}`, background: C.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#938a80', cursor: 'pointer' }}>← 내 공간</button>
+      </div>
+
+      <div style={{ flex: 1, padding: '12px 16px', overflowY: 'auto' }}>
+        {msgs.map(m => (
+          <div key={m.id} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '10px' }}>
+            <div style={{ maxWidth: '74%', background: m.role === 'user' ? C.paper : '#242420', border: m.role === 'user' ? `1px solid ${C.line}` : 'none', borderRadius: '11px', padding: '9px 11px', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-4px', [m.role === 'user' ? 'right' : 'left']: '10px', width: '24px', height: '7px', borderRadius: '2px', background: m.role === 'user' ? 'rgba(198,188,170,.52)' : 'rgba(255,255,255,.17)' }} />
+              {m.role === 'admin' && <div style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '.08em', color: '#d7cfbf', marginBottom: '3px' }}>마인드포스팃</div>}
+              <p style={{ fontSize: '12px', fontWeight: '300', lineHeight: '1.75', color: m.role === 'user' ? C.ink : '#f8f4ec', wordBreak: 'keep-all' }}>{m.content}</p>
+              <p style={{ fontSize: '8px', color: m.role === 'user' ? '#b3aa9e' : '#beb5a7', marginTop: '5px', textAlign: m.role === 'user' ? 'right' : 'left' }}>{fmt(m.createdAt)}</p>
+            </div>
+          </div>
+        ))}
+
+        {thread.status === 'waiting' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 11px', border: `1px dashed ${C.line}`, borderRadius: '10px', background: '#f7f1e8', marginBottom: '10px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#beb4a9', animation: 'pulse 2s ease-in-out infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: '11px', color: '#8a8278' }}>직접 읽고 있어요. 조금 뒤 답장을 남겨둘게요.</span>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div style={{ borderTop: `1px solid #ddd4c8`, padding: '10px 16px 20px', background: C.bg }}>
+        <textarea
+          value={content} onChange={e => setContent(e.target.value)}
+          placeholder="한두 문장으로 이어서 남겨도 충분해요"
+          rows={3}
+          style={{ width: '100%', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '9px 11px', fontSize: '13px', lineHeight: '1.7', color: C.ink, resize: 'none', outline: 'none', fontFamily: "'Noto Sans KR', sans-serif", marginBottom: '7px' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '10px', lineHeight: '1.45', color: '#a2988d' }}>한두 문장으로 이어서 남겨도 충분해요</span>
+          <button onClick={send} disabled={!content.trim() || loading} style={{ padding: '7px 16px', border: 'none', borderRadius: '9px', background: C.ink, color: '#f8f4ed', fontSize: '11px', fontWeight: '800', cursor: 'pointer', opacity: (!content.trim() || loading) ? 0.5 : 1, fontFamily: "'Noto Sans KR', sans-serif" }}>남기기</button>
+        </div>
+      </div>
+      <style>{`@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}`}</style>
+    </div>
+  );
+}
+
+// ── 관리자 뷰 ────────────────────────────────
+function AdminView({ user, setUser }) {
+  const [threads, setThreads] = useState([]);
+  const [tab, setTab] = useState('inbox');
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => subscribeAllThreads(setThreads), []);
+
+  const doLogout = async () => { await logOut(); setUser(null); };
+
+  const waiting = threads.filter(t => t.status === 'waiting' && !t.isAlert);
+  const alerts = threads.filter(t => t.isAlert);
+  const done = threads.filter(t => t.status === 'replied' && !t.isAlert);
+
+  if (selected) return <AdminThread thread={selected} onBack={() => setSelected(null)} />;
+
+  return (
+    <div style={{ ...pageStyle, padding: '18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', maxWidth: '420px', margin: '0 auto 14px', paddingBottom: '12px', borderBottom: `1px solid ${C.line}` }}>
+        <div>
+          <div style={{ fontSize: '15px', fontWeight: '900', color: C.ink }}>받은 이야기</div>
+          <div style={{ fontSize: '10px', color: C.muted, marginTop: '2px' }}>밤사이 쌓인 이야기를 아침 6–7시에 확인하고 회신한다.</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '5px' }}>
+            <span style={{ background: C.ink, color: '#f8f4ed', fontSize: '9px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px' }}>미답장 {waiting.length}</span>
+            {alerts.length > 0 && <span style={{ background: '#f0e0d0', border: '1px solid #d4a898', color: '#7a6050', fontSize: '9px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px' }}>주의 {alerts.length}</span>}
+          </div>
+          <button onClick={doLogout} style={{ fontSize: '10px', color: C.soft, background: 'none', border: 'none', cursor: 'pointer' }}>로그아웃</button>
+        </div>
+      </div>
+
+      {/* 탭 */}
+      <div style={{ display: 'flex', gap: '4px', padding: '3px', background: '#e9e0d3', borderRadius: '9px', marginBottom: '12px', maxWidth: '420px', margin: '0 auto 12px' }}>
+        {[['inbox', '받은 글'], ['members', '회원'], ['alert', '주의']].map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: '6px 0', border: 'none', borderRadius: '7px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", background: tab === k ? C.ink : 'transparent', color: tab === k ? '#f9f5ee' : C.muted }}>{l}</button>
+        ))}
+      </div>
+
+      <div style={{ maxWidth: '420px', margin: '0 auto' }}>
+        {tab === 'inbox' && (
+          <>
+            {alerts.map(t => <ACard key={t.id} t={t} isAlert onClick={() => setSelected(t)} />)}
+            {waiting.map(t => <ACard key={t.id} t={t} onClick={() => setSelected(t)} />)}
+            {done.map(t => <ACard key={t.id} t={t} isDone onClick={() => setSelected(t)} />)}
+            {threads.length === 0 && <p style={{ fontSize: '12px', color: C.soft, textAlign: 'center', padding: '32px 0' }}>아직 들어온 이야기가 없어요.</p>}
+          </>
+        )}
+        {tab === 'members' && (
+          [...new Map(threads.map(t => [t.userId, t])).values()].map(t => {
+            const ut = threads.filter(x => x.userId === t.userId);
+            const hasNew = ut.some(x => x.status === 'waiting');
+            return (
+              <div key={t.userId} onClick={() => setSelected(t)} style={{ display: 'flex', gap: '9px', alignItems: 'flex-start', background: C.paper, border: `1px solid ${hasNew ? C.ink : C.line}`, borderRadius: '11px', padding: '10px 11px', marginBottom: '7px', cursor: 'pointer' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: hasNew ? C.ink : '#e9dfd2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', color: hasNew ? '#f8f4ed' : '#5a544c', flexShrink: 0 }}>{t.userId?.slice(0, 1).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: C.ink }}>{t.userId?.slice(0, 10)}...</span>
+                    <span style={{ fontSize: '9px', color: '#ada497' }}>{fmt(t.updatedAt)}</span>
+                  </div>
+                  <p style={{ fontSize: '10px', color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.lastMessage}</p>
+                  <span style={{ display: 'inline-block', marginTop: '3px', padding: '2px 6px', borderRadius: '999px', background: '#ece4d8', border: '1px solid #dad1c3', fontSize: '9px', fontWeight: '700', color: '#6f675e' }}>{hasNew ? '미답장' : '완료'} · {ut.length}건</span>
+                </div>
+              </div>
+            );
+          })
+        )}
+        {tab === 'alert' && (
+          alerts.length === 0
+            ? <p style={{ fontSize: '12px', color: C.soft, textAlign: 'center', padding: '32px 0' }}>주의 글이 없어요.</p>
+            : alerts.map(t => <ACard key={t.id} t={t} isAlert onClick={() => setSelected(t)} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ACard({ t, onClick, isAlert, isDone }) {
+  return (
+    <div onClick={onClick} style={{ background: C.paper, border: `1px solid ${isAlert ? '#d4a898' : isDone ? C.line : C.ink}`, borderRadius: '11px', padding: '9px 11px', marginBottom: '7px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(38,37,34,.03)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+        <span style={{ fontSize: '9px', color: '#ada497' }}>{fmt(t.updatedAt)}</span>
+        <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 7px', borderRadius: '999px', whiteSpace: 'nowrap', background: isAlert ? '#f0e0d0' : isDone ? '#e8e0d5' : C.ink, border: isAlert ? '1px solid #d4a898' : isDone ? '1px solid #cfc7bb' : 'none', color: isAlert ? '#7a6050' : isDone ? '#7a7268' : '#f8f4ed' }}>
+          {isAlert ? '주의 확인' : isDone ? '답장 완료' : '새 글'}
+        </span>
+      </div>
+      <p style={{ fontSize: '12px', lineHeight: '1.7', color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.lastMessage}</p>
+      <p style={{ fontSize: '9px', color: C.muted, marginTop: '3px' }}>{t.isAnonymous ? '익명' : '로그인 회원'}</p>
+    </div>
+  );
+}
+
+// ── 관리자 답장 화면 ─────────────────────────
+function AdminThread({ thread, onBack }) {
+  const [msgs, setMsgs] = useState([]);
+  const [reply, setReply] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isAlert, setIsAlert] = useState(thread.isAlert || false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    return subscribeMessages(thread.id, (m) => { setMsgs(m); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); });
+  }, [thread]);
+
+  const send = async () => {
+    if (!reply.trim()) return;
+    setLoading(true);
+    await addMessage(thread.id, reply, 'admin');
+    setReply('');
+    setLoading(false);
+  };
+
+  const toggleAlert = async () => {
+    const next = !isAlert;
+    await setThreadAlert(thread.id, next);
+    setIsAlert(next);
+  };
+
+  const userCount = msgs.filter(m => m.role === 'user').length;
+
+  return (
+    <div style={{ ...pageStyle, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div style={{ padding: '13px 18px', borderBottom: `1px solid ${C.line}`, background: C.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#938a80', cursor: 'pointer' }}>← 받은 이야기</button>
+        <button onClick={toggleAlert} style={{ fontSize: '10px', fontWeight: '700', padding: '5px 12px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: isAlert ? '#f0e0d0' : '#e9e0d3', color: isAlert ? '#7a6050' : C.muted, fontFamily: "'Noto Sans KR', sans-serif" }}>{isAlert ? '⚠️ 주의 해제' : '주의 설정'}</button>
+      </div>
+
+      <div style={{ flex: 1, padding: '12px 16px', overflowY: 'auto', maxWidth: '440px', margin: '0 auto', width: '100%' }}>
+        {/* 맥락 패널 */}
+        <div style={{ background: '#f7f0e5', border: `1px solid ${C.line}`, borderRadius: '11px', padding: '9px 11px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '9px', letterSpacing: '.08em', color: '#9b9287', marginBottom: '3px' }}>회원 {thread.userId?.slice(0, 8)}...</div>
+          <div style={{ fontSize: '12px', fontWeight: '800' }}>{userCount}번째 이야기 · {thread.isAnonymous ? '익명' : '로그인 회원'}</div>
+          <div style={{ fontSize: '10px', color: '#7d756b', marginTop: '3px', lineHeight: '1.6' }}>짧고 일관된 공감형 답장. 해석을 늘리기보다, 먼저 읽고 이해한 흔적을 남긴다.</div>
+        </div>
+
+        {/* 원문 */}
+        <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '11px', padding: '9px 11px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '9px', letterSpacing: '.08em', color: '#a1988c', marginBottom: '4px' }}>사용자 원문</div>
+          <div style={{ fontSize: '13px', lineHeight: '1.75', color: '#393632' }}>{thread.lastMessage}</div>
+        </div>
+
+        {/* 메시지 */}
+        {msgs.map(m => (
+          <div key={m.id} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '10px' }}>
+            <div style={{ maxWidth: '76%', background: m.role === 'user' ? C.paper : '#242420', border: m.role === 'user' ? `1px solid ${C.line}` : 'none', borderRadius: '11px', padding: '9px 11px', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-4px', [m.role === 'user' ? 'right' : 'left']: '10px', width: '24px', height: '7px', borderRadius: '2px', background: m.role === 'user' ? 'rgba(198,188,170,.52)' : 'rgba(255,255,255,.17)' }} />
+              {m.role === 'admin' && <div style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '.08em', color: '#d7cfbf', marginBottom: '3px' }}>준 (나)</div>}
+              <p style={{ fontSize: '12px', fontWeight: '300', lineHeight: '1.8', color: m.role === 'user' ? C.ink : '#f8f4ec', wordBreak: 'keep-all' }}>{m.content}</p>
+              <p style={{ fontSize: '8px', color: m.role === 'user' ? '#b3aa9e' : '#beb5a7', marginTop: '4px', textAlign: m.role === 'user' ? 'right' : 'left' }}>{fmt(m.createdAt)}</p>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      <div style={{ borderTop: `1px solid #ddd4c8`, padding: '12px 18px 24px', background: C.bg, maxWidth: '440px', margin: '0 auto', width: '100%' }}>
+        <div style={{ fontSize: '9px', letterSpacing: '.08em', color: '#a1988c', marginBottom: '8px' }}>답장 초안</div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+          {['공감 1문장', '재반영 1문장', '부담 없는 초대'].map(q => (
+            <span key={q} style={{ padding: '4px 8px', borderRadius: '999px', background: '#f0e7db', border: '1px solid #ddd1c3', fontSize: '10px', color: '#6d665d' }}>{q}</span>
+          ))}
+        </div>
+        <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="공감 → 재반영 → 부담 없는 초대 순서로" rows={4} style={{ width: '100%', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '10px 11px', fontSize: '13px', lineHeight: '1.75', color: C.ink, resize: 'none', outline: 'none', fontFamily: "'Noto Sans KR', sans-serif", marginBottom: '8px' }} />
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={send} disabled={!reply.trim() || loading} style={{ ...btnFill, opacity: (!reply.trim() || loading) ? 0.5 : 1 }}>{loading ? '보내는 중...' : '답장 보내기'}</button>
+          <button onClick={toggleAlert} style={{ ...btnOutline, width: 'auto', padding: '10px 14px', whiteSpace: 'nowrap', fontSize: '11px' }}>{isAlert ? '주의 해제' : '주의 문구로 전환'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
