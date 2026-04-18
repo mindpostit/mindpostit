@@ -92,7 +92,7 @@ function Splash({ setView, user }) {
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div style={{ fontSize: '11px', fontWeight: '900', letterSpacing: '.22em', color: '#a29789', marginBottom: '22px' }}>마인드포스팃</div>
+        <div style={{ fontSize: '13px', fontWeight: '400', letterSpacing: '.1em', color: '#a29789', marginBottom: '22px', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
         <h1 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
           어떤 이야기든,<br />여기선 괜찮아요.
         </h1>
@@ -365,7 +365,7 @@ function Home({ user, setView, setUser, goThread }) {
   return (
     <div style={{ ...pageStyle, padding: '18px 18px 40px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto 14px' }}>
-        <span style={{ fontSize: '12px', fontWeight: '900', letterSpacing: '.14em', color: '#847b71' }}>마인드포스팃</span>
+        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</span>
         <button onClick={doLogout} style={{ fontSize: '10px', color: '#a39a8f', background: 'none', border: 'none', cursor: 'pointer' }}>로그아웃</button>
       </div>
 

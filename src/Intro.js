@@ -15,7 +15,7 @@ export default function Intro({ setView, user, setPrevView }) {
       {/* 헤더 */}
       <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(245,240,234,.94)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(217,208,195,.85)' }}>
         <nav style={{ maxWidth: '1360px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', gap: '16px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '14px', fontWeight: '900', letterSpacing: '.22em', color: '#7b7368' }}>마인드포스팃</div>
+          <div style={{ fontSize: '18px', fontWeight: '400', letterSpacing: '.06em', color: '#7b7368', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <a onClick={() => scrollTo(introRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>소개</a>
             <a onClick={() => scrollTo(flowRef)} href="#" style={{ color: '#6e665d', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>이용 흐름</a>
@@ -28,7 +28,7 @@ export default function Intro({ setView, user, setPrevView }) {
         {/* 히어로 */}
         <section ref={introRef} style={{ minHeight: 'calc(100vh - 82px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '54px 24px 64px', background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,.70), rgba(255,255,255,0) 42%)' }}>
           <div style={{ width: 'min(100%, 700px)', background: 'rgba(255,255,255,.65)', border: '1px solid rgba(255,255,255,.82)', borderRadius: '42px', padding: '48px 42px 36px', boxShadow: '0 28px 80px rgba(38,37,34,.10)', textAlign: 'center' }}>
-            <div style={{ fontSize: '13px', fontWeight: '800', letterSpacing: '.22em', color: '#a79c8e', marginBottom: '22px' }}>마인드포스팃</div>
+            <div style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#a79c8e', marginBottom: '22px', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
             <h1 style={{ fontSize: 'clamp(34px, 7vw, 64px)', lineHeight: '1.18', letterSpacing: '-.06em', fontWeight: '900', marginBottom: '28px' }}>어떤 이야기든,<br />여기선 괜찮아요.</h1>
             <div style={{ width: '1px', height: '34px', background: '#c8beb2', margin: '0 auto 28px' }} />
             <p style={{ fontSize: '20px', lineHeight: '1.9', color: '#6c655d' }}>충분히 들어줄게요.</p>
