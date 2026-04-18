@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Intro from './Intro';
 import {
   signInAnon, signUpWithEmail, signInWithEmail, resetPassword, logOut,
   onAuthChange, createThread, addMessage, subscribeMessages,
@@ -48,7 +49,7 @@ const centerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'cen
 export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [view, setView] = useState('splash');
+  const [view, setView] = useState('intro');
   const [currentThread, setCurrentThread] = useState(null);
 
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function App() {
 
   return (
     <div style={pageStyle}>
+      {view === 'intro' && <Intro setView={setView} user={user} />}
       {view === 'splash' && <Splash setView={setView} user={user} />}
       {view === 'write' && <Write user={user} setView={setView} />}
       {view === 'done' && <Done setView={setView} />}
