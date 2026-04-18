@@ -51,6 +51,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [view, setView] = useState('intro');
   const [currentThread, setCurrentThread] = useState(null);
+  const [prevView, setPrevView] = useState('intro');
 
   useEffect(() => {
     const unsub = onAuthChange((u) => { setUser(u); setAuthReady(true); });
@@ -62,6 +63,7 @@ export default function App() {
   }, [authReady, user]);
 
   const goThread = (t) => { setCurrentThread(t); setView('thread'); };
+  const goLogin = (from) => { setPrevView(from); setView('login'); };
 
   if (!authReady) return (
     <div style={{ ...pageStyle, ...centerStyle }}>
@@ -73,11 +75,11 @@ export default function App() {
 
   return (
     <div style={pageStyle}>
-      {view === 'intro' && <Intro setView={setView} user={user} />}
+      {view === 'intro' && <Intro setView={setView} user={user} setPrevView={setPrevView} />}
       {view === 'splash' && <Splash setView={setView} user={user} />}
       {view === 'write' && <Write user={user} setView={setView} />}
-      {view === 'done' && <Done setView={setView} />}
-      {view === 'login' && <Login setView={setView} setUser={setUser} />}
+      {view === 'done' && <Done setView={setView} setPrevView={setPrevView} />}
+      {view === 'login' && <Login setView={setView} setUser={setUser} prevView={prevView} />}
       {view === 'signup' && <Signup setView={setView} setUser={setUser} />}
       {view === 'home' && <Home user={user} setView={setView} setUser={setUser} goThread={goThread} />}
       {view === 'thread' && <Thread thread={currentThread} setView={setView} />}
@@ -190,7 +192,7 @@ function Write({ user, setView }) {
 }
 
 // ── 전송 완료 ────────────────────────────────
-function Done({ setView }) {
+function Done({ setView, setPrevView }) {
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
       <div style={{ width: '130px', margin: '0 auto 16px', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '12px 10px', transform: 'rotate(-2deg)', position: 'relative', boxShadow: '0 4px 10px rgba(38,37,34,.06)' }}>
@@ -213,8 +215,8 @@ function Done({ setView }) {
       </div>
 
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-        <button style={btnFill} onClick={() => setView('signup')}>회원가입하고 답장 받기</button>
-        <button style={btnOutline} onClick={() => setView('login')}>이미 계정이 있어요</button>
+        <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('signup'); }}>회원가입하고 답장 받기</button>
+        <button style={btnOutline} onClick={() => { setPrevView('done'); setView('login'); }}>이미 계정이 있어요</button>
         <button style={btnSoft} onClick={() => setView('splash')}>처음으로</button>
       </div>
 
@@ -224,7 +226,7 @@ function Done({ setView }) {
 }
 
 // ── 로그인 ───────────────────────────────────
-function Login({ setView, setUser }) {
+function Login({ setView, setUser, prevView = 'intro' }) {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [loading, setLoading] = useState(false);
@@ -249,7 +251,7 @@ function Login({ setView, setUser }) {
 
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
-      <button onClick={() => setView('done')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+      <button onClick={() => setView(prevView)} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
 
       <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
         <div style={{ fontSize: '15px', fontWeight: '800', lineHeight: '1.45', marginBottom: '4px' }}>답장을 놓치지 않으려면</div>

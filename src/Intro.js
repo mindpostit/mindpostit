@@ -1,13 +1,13 @@
 import React, { useRef } from 'react';
 
-export default function Intro({ setView, user }) {
+export default function Intro({ setView, user, setPrevView }) {
   const introRef = useRef(null);
   const flowRef = useRef(null);
 
   const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: 'smooth' });
 
   const goWrite = () => setView('write');
-  const goLogin = () => setView(user && !user.isAnonymous ? 'home' : 'login');
+  const goLogin = () => { if (user && !user.isAnonymous) { setView('home'); } else { setPrevView && setPrevView('intro'); setView('login'); } };
 
   return (
     <div style={{ fontFamily: "'Noto Sans KR', sans-serif", color: '#262522', background: 'linear-gradient(180deg,#f6f1ea 0%,#efe8de 100%)', minHeight: '100vh' }}>
@@ -36,7 +36,7 @@ export default function Intro({ setView, user }) {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', margin: '28px 0 24px' }}>
               <button onClick={goWrite} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: '#23231f', color: '#f8f5ef', border: 'none', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", boxShadow: '0 14px 28px rgba(35,35,31,.18)' }}>지금 남기기</button>
               <button onClick={goLogin} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>로그인 · 나만의 공간</button>
-              <button onClick={() => scrollTo(flowRef)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>먼저 둘러보기</button>
+              <a href="#flow" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '18px 30px', borderRadius: '999px', fontSize: '16px', fontWeight: '800', background: 'transparent', color: '#5e5850', border: '1px solid #d9d0c3', cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", textDecoration: 'none' }}>먼저 둘러보기</a>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '22px' }}>
@@ -71,7 +71,7 @@ export default function Intro({ setView, user }) {
         </section>
 
         {/* 이용 흐름 */}
-        <section ref={flowRef} style={{ padding: '88px 24px' }}>
+        <section id="flow" ref={flowRef} style={{ padding: '88px 24px' }}>
           <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
             <div style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '.18em', color: '#a29789', marginBottom: '12px' }}>이용 흐름</div>
             <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', lineHeight: '1.28', letterSpacing: '-.04em', fontWeight: '900', marginBottom: '12px' }}>복잡하지 않게, 네 단계면 충분해요.</h2>
