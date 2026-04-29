@@ -216,8 +216,8 @@ function Done({ setView, setPrevView }) {
       </div>
 
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-        <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('signup'); }}>회원가입하고 답장 받기</button>
-        <button style={btnOutline} onClick={() => { setPrevView('done'); setView('login'); }}>이미 계정이 있어요</button>
+        <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('login'); }}>로그인하고 답장 받기</button>
+        <button style={btnOutline} onClick={() => { setPrevView && setPrevView('done'); setView('signup'); }}>처음 오셨나요? 회원가입</button>
         <button style={btnSoft} onClick={() => setView('splash')}>처음으로</button>
       </div>
 
