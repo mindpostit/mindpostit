@@ -108,7 +108,7 @@ function Splash({ setView, user }) {
       </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
-        {['익명 가능', 'AI 아님', '아침 답장'].map(t => (
+        {['익명 가능', 'AI 아님', '빠른 답장'].map(t => (
           <span key={t} style={{ padding: '4px 9px', borderRadius: '999px', border: `1px solid ${C.line}`, background: '#f7f0e7', fontSize: '11px', color: '#6d665d' }}>{t}</span>
         ))}
       </div>
@@ -204,16 +204,8 @@ function Done({ setView, setPrevView }) {
 
       <h2 style={{ fontSize: '20px', fontWeight: '900', textAlign: 'center', letterSpacing: '-.02em', marginBottom: '6px' }}>남겨줘서 고마워요.</h2>
       <p style={{ fontSize: '12px', lineHeight: '1.75', textAlign: 'center', color: C.muted, marginBottom: '14px' }}>
-        오늘 밤 남긴 이야기는<br />아침 6–7시에 차분히 읽고<br />짧게 답장을 남겨둘게요.
+        남겨준 이야기는<br />차분히 읽고<br />짧게 답장을 남겨둘게요.
       </p>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '16px', width: '100%', maxWidth: '280px' }}>
-        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.ink, flexShrink: 0 }} />
-        <div style={{ flex: 1, height: '1px', background: '#d7cec1' }} />
-        <span style={{ fontSize: '10px', color: '#6e665c', fontWeight: '700', whiteSpace: 'nowrap' }}>답장 예정</span>
-        <div style={{ flex: 1, height: '1px', background: '#d7cec1' }} />
-        <span style={{ fontSize: '10px', color: '#9a9086', whiteSpace: 'nowrap' }}>06–07시</span>
-      </div>
 
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
         <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('login'); }}>로그인하고 답장 받기</button>
@@ -277,7 +269,7 @@ function Login({ setView, setUser, prevView = 'intro' }) {
           <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px' }}>가입하면 달라지는 것</div>
           <div style={{ fontSize: '10px', lineHeight: '1.65', color: '#7d756b' }}>답장 확인 · 대화 보관 · 이어서 남기기</div>
           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-            {[['답장', '아침 확인'], ['기록', '내 공간 저장']].map(([k, v]) => (
+            {[['답장', '빠른 확인'], ['기록', '내 공간 저장']].map(([k, v]) => (
               <div key={k} style={{ flex: 1, padding: '6px 8px', borderRadius: '9px', border: '1px solid #e1d6c9', background: '#fffaf3' }}>
                 <div style={{ fontSize: '9px', color: '#978d82' }}>{k}</div>
                 <div style={{ fontSize: '12px', fontWeight: '800', marginTop: '1px', color: '#33312e' }}>{v}</div>
@@ -401,7 +393,7 @@ function Home({ user, setView, setUser, goThread }) {
   const banner = hasReplied
     ? { style: { background: '#272725' }, title: '답장이 도착했어요.', sub: '어젯밤 이야기를 읽고 답장을 남겼어요.', tc: '#f8f4ed', sc: '#c8bfb1' }
     : hasWaiting
-    ? { style: { background: '#f4ede4', border: `1px dashed #d3c9bd` }, title: '받았어요.', sub: '아침 6–7시에 차분히 읽고 답장을 남길게요.', tc: '#5a5349', sc: '#8a8278' }
+    ? { style: { background: '#f4ede4', border: `1px dashed #d3c9bd` }, title: '받았어요.', sub: '차분히 읽고 답장을 남길게요.', tc: '#5a5349', sc: '#8a8278' }
     : { style: { background: 'linear-gradient(180deg,#fcf8f2 0%,#f4ebdf 100%)', border: `1px solid ${C.line}` }, title: '오늘 하루 어땠어요?', sub: '여기다 두고 가도 괜찮아요.', tc: '#403c37', sc: '#7d756b' };
 
   return (
@@ -528,7 +520,7 @@ function AdminView({ user, setUser }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', maxWidth: '420px', margin: '0 auto 14px', paddingBottom: '12px', borderBottom: `1px solid ${C.line}` }}>
         <div>
           <div style={{ fontSize: '15px', fontWeight: '900', color: C.ink }}>받은 이야기</div>
-          <div style={{ fontSize: '10px', color: C.muted, marginTop: '2px' }}>밤사이 쌓인 이야기를 아침 6–7시에 확인하고 회신한다.</div>
+          <div style={{ fontSize: '10px', color: C.muted, marginTop: '2px' }}>쌓인 이야기를 확인하고 회신한다.</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
           <div style={{ display: 'flex', gap: '5px' }}>

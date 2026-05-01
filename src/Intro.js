@@ -13,15 +13,15 @@ export default function Intro({ setView, user, setPrevView }) {
 
   const steps = [
     { num:'STEP 01', title:'익명으로 남기기', desc:'이름 없이 바로 시작할 수 있어요. 잘 정리되지 않아도 괜찮아요.', time:'22:43', cardTitle:'말 못한 게 있죠.', cardSub:'지금 마음 그대로 남겨도 돼요.', cardText:'퇴근하고 누웠는데 머리가 멈추질 않아요...', btn:'남기기' },
-    { num:'STEP 02', title:'아침 답장 기다리기', desc:'남긴 이야기는 끝난 게 아니라, 아침에 다시 확인할 이유로 남아 있어요.', time:'22:47', cardTitle:'남겨줘서 고마워요.', cardSub:'아침 6–7시에 차분히 읽고 답장을 남겨둘게요.', cardText:'아침 06–07시 답장', btn:'답장 받으러 오기' },
-    { num:'STEP 03', title:'내 공간에서 확인하기', desc:'다시 들어오면 내 이야기 상태가 먼저 보여요.', time:'08:12', cardTitle:'답장이 도착했어요.', cardSub:'어젯밤 이야기를 읽고 답장을 남겼어요.', cardText:'하루가 끝났는데도 머리가 계속 달리고 있었던 것 같아요...', btn:'이어서 말하기' },
-    { num:'STEP 04', title:'조용히 이어가기', desc:'내 이야기와 답장이 쌓이며, 1:1 개인 공간이 만들어져요.', time:'08:16', cardTitle:'내 이야기 스레드', cardSub:'한두 문장으로 이어서 남겨도 충분해요.', cardText:'오늘 출근길도 벌써 막막해요.', btn:'남기기' },
+    { num:'STEP 02', title:'답장 기다리기', desc:'남긴 이야기는 끝난 게 아니라, 답장이 올 때까지 내 공간에 남아 있어요.', time:'22:47', cardTitle:'남겨줘서 고마워요.', cardSub:'차분히 읽고 답장을 남겨둘게요.', cardText:'받았어요.', btn:'답장 받으러 오기' },
+    { num:'STEP 03', title:'내 공간에서 확인하기', desc:'다시 들어오면 내 이야기 상태가 먼저 보여요.', time:'···', cardTitle:'답장이 도착했어요.', cardSub:'남긴 이야기를 읽고 답장을 남겼어요.', cardText:'하루가 끝났는데도 머리가 계속 달리고 있었던 것 같아요...', btn:'이어서 말하기' },
+    { num:'STEP 04', title:'조용히 이어가기', desc:'내 이야기와 답장이 쌓이며, 1:1 개인 공간이 만들어져요.', time:'···', cardTitle:'내 이야기 스레드', cardSub:'한두 문장으로 이어서 남겨도 충분해요.', cardText:'오늘 출근길도 벌써 막막해요.', btn:'남기기' },
   ];
 
   const infoCards = [
     { k:'무엇을 해주나요', v:'어떤 이야기든\n편향과 선입견 없이 들어요.', sub:'평가보다 먼저 수신하고, 조언보다 먼저 받아줍니다.' },
     { k:'왜 믿을 수 있나요', v:'AI 자동 응답이 아니라,\n진짜 사람이 직접 읽어요.', sub:'기계적인 문장이 아니라, 실제로 읽은 흔적이 느껴지는 답장을 보냅니다.' },
-    { k:'왜 다시 오게 되나요', v:'밤에 남기고,\n아침 6–7시에 확인해요.', sub:'푸시 대신 약속된 시간과 기다림이 재방문 이유가 됩니다.' },
+    { k:'왜 다시 오게 되나요', v:'남긴 이야기에\n답장이 와요.', sub:'푸시 알림 없이도, 답장이 기다리고 있다는 감각이 다시 돌아오게 만들어요.' },
   ];
 
   return (
@@ -53,7 +53,7 @@ export default function Intro({ setView, user, setPrevView }) {
               <button onClick={() => scrollTo('flow')} style={btnOutline}>먼저 둘러보기</button>
             </div>
             <div style={{ display:'flex', justifyContent:'center', gap:'10px', flexWrap:'wrap', marginBottom:'22px' }}>
-              {['익명 가능', 'AI 아님', '아침 답장'].map(t => (
+              {['익명 가능', 'AI 아님', '빠른 답장'].map(t => (
                 <span key={t} style={{ padding:'10px 16px', borderRadius:'999px', border:'1px solid #d9d0c3', background:'#fbf7f1', color:'#746d65', fontSize:'14px' }}>{t}</span>
               ))}
             </div>
@@ -66,7 +66,7 @@ export default function Intro({ setView, user, setPrevView }) {
           <div style={{ maxWidth:'1180px', margin:'0 auto' }}>
             <div style={{ fontSize:'15px', fontWeight:'800', letterSpacing:'.18em', color:'#a29789', marginBottom:'12px' }}>소개</div>
             <h2 style={{ fontSize:'clamp(24px, 4vw, 38px)', lineHeight:'1.28', letterSpacing:'-.04em', fontWeight:'900', marginBottom:'12px' }}>마인드포스팃은 익명 게시판이 아니라,<br />조용히 받아주는 1:1 개인 공간이에요.</h2>
-            <p style={{ maxWidth:'760px', fontSize:'17px', lineHeight:'1.9', color:'#6c655d', marginBottom:'34px' }}>잘 쓴 문장이 아니어도 괜찮아요. 정리되지 않은 마음이어도 괜찮아요. 밤에 남겨둔 이야기를 아침에 직접 읽고, 짧지만 담백하게 답장을 남겨요. 로그인하면 내 이야기와 공간이 생겨요.</p>
+            <p style={{ maxWidth:'760px', fontSize:'17px', lineHeight:'1.9', color:'#6c655d', marginBottom:'34px' }}>잘 쓴 문장이 아니어도 괜찮아요. 정리되지 않은 마음이어도 괜찮아요. 남겨둔 이야기를 직접 읽고, 짧지만 담백하게 답장을 남겨요. 로그인하면 내 이야기와 공간이 생겨요.</p>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:'18px' }}>
               {infoCards.map(({ k, v, sub }) => (
                 <div key={k} style={{ background:'rgba(255,255,255,.55)', border:'1px solid rgba(217,208,195,.95)', borderRadius:'26px', padding:'24px', boxShadow:'0 14px 34px rgba(38,37,34,.04)' }}>
