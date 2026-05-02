@@ -103,8 +103,14 @@ function Splash({ setView, user }) {
 
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <button style={btnFill} onClick={() => setView('write')}>지금 남기기</button>
-        <button style={btnOutline} onClick={() => setView(user && !user.isAnonymous ? 'home' : 'login')}>로그인 · 나만의 공간</button>
-        <button style={btnSoft} onClick={() => setView('intro')}>먼저 둘러보기</button>
+        {user && !user.isAnonymous ? (
+          <button style={btnOutline} onClick={() => setView('home')}>내 공간 보러 가기</button>
+        ) : (
+          <>
+            <button style={btnOutline} onClick={() => setView('login')}>로그인 · 나만의 공간</button>
+            <button style={btnSoft} onClick={() => setView('intro')}>먼저 둘러보기</button>
+          </>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
