@@ -45,3 +45,59 @@ exports.deleteAnonymousThreads = functions
     console.log(`✅ 익명 글 ${count}건 삭제 완료`);
     return null;
   });
+
+// ─────────────────────────────────────────────────
+// 답장 시 유저에게 푸시 알림 발송
+// threads/{threadId} 문서에서 status가 'replied'로 바뀔 때 트리거
+// ─────────────────────────────────────────────────
+exports.sendReplyNotification = functions
+  .region('asia-northeast3')
+  .firestore
+  .document('threads/{threadId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // status가 waiting → replied 로 바뀔 때만 실행
+    if (before.status !== 'waiting' || after.status !== 'replied') return null;
+
+    const userId = after.userId;
+    if (!userId) return null;
+
+    // users 컬렉션에서 FCM 토큰 조회
+    const userSnap = await db.collection('users')
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+
+    if (userSnap.empty) {
+      console.log('FCM 토큰 없음 - 알림 스킵');
+      return null;
+    }
+
+    const fcmToken = userSnap.docs[0].data().fcmToken;
+    if (!fcmToken) return null;
+
+    // 푸시 발송
+    const message = {
+      token: fcmToken,
+      notification: {
+        title: '마인드포스팃',
+        body: '답장이 도착했어요. 확인하러 오세요.'
+      },
+      webpush: {
+        fcmOptions: {
+          link: 'https://mindpostit.live'
+        }
+      }
+    };
+
+    try {
+      await admin.messaging().send(message);
+      console.log(`✅ 푸시 발송 완료 - userId: ${userId}`);
+    } catch (error) {
+      console.error('푸시 발송 오류:', error);
+    }
+
+    return null;
+  });

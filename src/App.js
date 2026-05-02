@@ -3,7 +3,8 @@ import Intro from './Intro';
 import {
   signInAnon, signUpWithEmail, signInWithEmail, resetPassword, logOut,
   onAuthChange, createThread, addMessage, subscribeMessages,
-  subscribeUserThreads, subscribeAllThreads, setThreadAlert
+  subscribeUserThreads, subscribeAllThreads, setThreadAlert,
+  requestNotificationPermission, onForegroundMessage
 } from './firebase';
 import { validateContent } from './contentFilter';
 
@@ -428,6 +429,19 @@ function Home({ user, setView, setUser, goThread }) {
   useEffect(() => {
     if (!user) return;
     return subscribeUserThreads(user.uid, (t) => { setThreads(t); setLoading(false); });
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.isAnonymous) return;
+    // 알림 허용 요청 (한 번만)
+    if (Notification.permission === 'default') {
+      setTimeout(() => requestNotificationPermission(user.uid), 3000);
+    }
+    // 포그라운드 메시지 수신
+    const unsub = onForegroundMessage((payload) => {
+      console.log('포그라운드 메시지:', payload);
+    });
+    return unsub;
   }, [user]);
 
   const doLogout = async () => { await logOut(); setUser(null); setView('splash'); };

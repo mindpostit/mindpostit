@@ -182,3 +182,39 @@ export const setThreadAlert = async (threadId, isAlert) => {
 
 export { analytics, auth, db };
 export default db;
+
+// ── FCM 푸시 알림 ─────────────────────────────
+
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+
+const VAPID_KEY = 'BJSY9pFhsVuxlPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
+
+// FCM 토큰 요청 및 저장
+export const requestNotificationPermission = async (userId) => {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return { success: false, reason: 'denied' };
+
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if (!token) return { success: false, reason: 'no_token' };
+
+    // Firestore에 토큰 저장
+    await updateDoc(doc(db, 'users', userId), { fcmToken: token, updatedAt: serverTimestamp() })
+      .catch(async () => {
+        // 문서 없으면 새로 생성
+        await addDoc(collection(db, 'users'), { userId, fcmToken: token, updatedAt: serverTimestamp() });
+      });
+
+    return { success: true, token };
+  } catch (error) {
+    console.error('알림 권한 오류:', error);
+    return { success: false, error };
+  }
+};
+
+// 포그라운드 메시지 수신
+export const onForegroundMessage = (callback) => {
+  const messaging = getMessaging(app);
+  return onMessage(messaging, callback);
+};
