@@ -200,29 +200,62 @@ function Write({ user, setView }) {
 
 // ── 전송 완료 ────────────────────────────────
 function Done({ setView, setPrevView, user }) {
+  const [showNudge, setShowNudge] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowNudge(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleAction = (fn) => { setShowNudge(false); fn(); };
+
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
-      <div style={{ width: '130px', margin: '0 auto 16px', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '12px 10px', transform: 'rotate(-2deg)', position: 'relative', boxShadow: '0 4px 10px rgba(38,37,34,.06)' }}>
+      <style>{`
+        @keyframes wobble {
+          0%   { transform: rotate(-2deg); }
+          20%  { transform: rotate(-4deg); }
+          40%  { transform: rotate(0deg); }
+          60%  { transform: rotate(-3deg); }
+          80%  { transform: rotate(-1deg); }
+          100% { transform: rotate(-2deg); }
+        }
+        .postit-wobble { animation: wobble 0.7s ease-in-out 0s infinite; }
+      `}</style>
+
+      <div
+        className="postit-wobble"
+        style={{ width: '130px', margin: '0 auto 16px', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '12px 10px', position: 'relative', boxShadow: '0 4px 10px rgba(38,37,34,.06)' }}
+      >
         <div style={{ position: 'absolute', top: '-6px', left: '50%', transform: 'translateX(-50%)', width: '38px', height: '11px', borderRadius: '2px', background: 'rgba(198,188,170,.52)' }} />
         <p style={{ fontSize: '11px', lineHeight: '1.7', color: '#5a554e' }}>방금 남긴 이야기가 안전하게 전달됐어요.</p>
         <small style={{ display: 'block', marginTop: '6px', fontSize: '9px', color: '#b0a79c' }}>{new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · 오늘</small>
       </div>
 
       <h2 style={{ fontSize: '20px', fontWeight: '900', textAlign: 'center', letterSpacing: '-.02em', marginBottom: '6px' }}>남겨줘서 고마워요.</h2>
-      <p style={{ fontSize: '12px', lineHeight: '1.75', textAlign: 'center', color: C.muted, marginBottom: '14px' }}>
+      <p style={{ fontSize: '12px', lineHeight: '1.75', textAlign: 'center', color: C.muted, marginBottom: '8px' }}>
         남겨준 이야기는<br />차분히 읽고 답장을 남겨둘게요.
+      </p>
+
+      <p style={{
+        fontSize: '11px', color: '#9a9086', textAlign: 'center', marginBottom: '12px',
+        opacity: showNudge ? 1 : 0,
+        transform: showNudge ? 'translateX(0)' : 'translateX(-8px)',
+        transition: 'opacity 0.6s ease, transform 0.6s ease'
+      }}>
+        답장을 놓치지 않으려면 →
       </p>
 
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
         {user && !user.isAnonymous ? (
-          <button style={btnFill} onClick={() => setView('home')}>내 공간 보러 가기</button>
+          <button style={btnFill} onClick={() => handleAction(() => setView('home'))}>내 공간 보러 가기</button>
         ) : (
           <>
-            <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('login'); }}>로그인하고 답장 받기</button>
-            <button style={btnOutline} onClick={() => { setPrevView && setPrevView('done'); setView('signup'); }}>처음 오셨나요? 회원가입</button>
+            <button style={btnFill} onClick={() => handleAction(() => { setPrevView && setPrevView('done'); setView('login'); })}>로그인하고 답장 받기</button>
+            <button style={btnOutline} onClick={() => handleAction(() => { setPrevView && setPrevView('done'); setView('signup'); })}>처음 오셨나요? 회원가입</button>
           </>
         )}
-        <button style={btnSoft} onClick={() => setView('splash')}>처음으로</button>
+        <button style={btnSoft} onClick={() => handleAction(() => setView('splash'))}>처음으로</button>
       </div>
 
       <p style={{ marginTop: '12px', fontSize: '10px', lineHeight: '1.65', textAlign: 'center', color: '#9a9186' }}>AI가 아니라, 진짜 사람이 직접 읽고 남기는 답장이에요.</p>
