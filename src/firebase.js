@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, collection, addDoc, getDocs, updateDoc, setDoc,
+  getFirestore, collection, addDoc, getDocs, updateDoc, setDoc, writeBatch,
   doc, query, orderBy, where, serverTimestamp, onSnapshot
 } from 'firebase/firestore';
 import {
@@ -181,9 +181,23 @@ export const setThreadAlert = async (threadId, isAlert) => {
   }
 };
 
+export const deleteThread = async (threadId) => {
+  try {
+    const messages = await getDocs(collection(db, 'threads', threadId, 'messages'));
+    const batch = writeBatch(db);
+    messages.forEach(m => batch.delete(m.ref));
+    batch.delete(doc(db, 'threads', threadId));
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('스레드 삭제 오류:', error);
+    return { success: false, error };
+  }
+};
+
 // ── FCM 푸시 알림 ─────────────────────────────
 
-const VAPID_KEY = 'BJSY9pFhsVuxlPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
+const VAPID_KEY = 'BJSY9pFhsVuxIPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
 
 export const requestNotificationPermission = async (userId) => {
   try {
