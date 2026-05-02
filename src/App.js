@@ -51,7 +51,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [view, setView] = useState('splash');
   const [currentThread, setCurrentThread] = useState(null);
-  const [prevView, setPrevView] = useState('intro');
+  const [prevView, setPrevView] = useState('splash');
 
   useEffect(() => {
     const unsub = onAuthChange((u) => { setUser(u); setAuthReady(true); });
@@ -297,6 +297,7 @@ function Done({ setView, setPrevView, user }) {
 
 // ── 로그인 ───────────────────────────────────
 function Login({ setView, setUser, prevView = 'splash' }) {
+  const safeBack = prevView === 'intro' ? 'splash' : prevView;
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [loading, setLoading] = useState(false);
@@ -313,7 +314,7 @@ function Login({ setView, setUser, prevView = 'splash' }) {
 
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
-      <button onClick={() => setView(prevView)} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+      <button onClick={() => setView(safeBack)} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
 
       <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
         <div style={{ fontSize: '15px', fontWeight: '800', lineHeight: '1.45', marginBottom: '4px' }}>답장을 놓치지 않으려면</div>
