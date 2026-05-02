@@ -4,7 +4,7 @@ import {
   signInAnon, signUpWithEmail, signInWithEmail, resetPassword, logOut,
   onAuthChange, createThread, addMessage, subscribeMessages,
   subscribeUserThreads, subscribeAllThreads, setThreadAlert,
-  requestNotificationPermission, onForegroundMessage
+  requestNotificationPermission, onForegroundMessage, deleteThread
 } from './firebase';
 import { validateContent } from './contentFilter';
 
