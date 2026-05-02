@@ -7,24 +7,36 @@ firebase.initializeApp({
   projectId: "mindpostit-f0b48",
   storageBucket: "mindpostit-f0b48.firebasestorage.app",
   messagingSenderId: "15997772650",
-  appId: "1:15997772650:web:756fc4c75365316a74bb13"
+  appId: "1:15997772650:web:756fc4c75365316a74bb13",
+  measurementId: "G-L8N7YGDBF4"
 });
 
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const { title, body } = payload.notification;
+  console.log('백그라운드 메시지 수신:', payload);
+  const title = payload.notification?.title || '마인드포스팃';
+  const body = payload.notification?.body || '새 알림이 있어요.';
+
   self.registration.showNotification(title, {
     body,
     icon: '/favicon.svg',
     badge: '/favicon.svg',
-    data: payload.data
+    vibrate: [200, 100, 200],
+    data: { url: 'https://mindpostit.live' }
   });
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('https://mindpostit.live')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes('mindpostit.live') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow('https://mindpostit.live');
+    })
   );
 });
