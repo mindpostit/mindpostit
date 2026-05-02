@@ -433,10 +433,9 @@ function Home({ user, setView, setUser, goThread }) {
 
   useEffect(() => {
     if (!user || user.isAnonymous) return;
-    // 알림 허용 요청 (한 번만)
-    if (Notification.permission === 'default') {
-      setTimeout(() => requestNotificationPermission(user.uid), 3000);
-    }
+    // 알림 허용 요청 + 토큰 저장 (허용 상태면 바로 저장, 미결 상태면 팝업)
+    setTimeout(() => requestNotificationPermission(user.uid), 3000);
+
     // 포그라운드 메시지 수신
     const unsub = onForegroundMessage((payload) => {
       console.log('포그라운드 메시지:', payload);
