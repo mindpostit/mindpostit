@@ -9,6 +9,7 @@ import {
   onAuthStateChanged, linkWithCredential, EmailAuthProvider
 } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBG5MofvBCD0y93vL-gT39bx76rNJWvztE",
@@ -184,8 +185,6 @@ export { analytics, auth, db };
 export default db;
 
 // ── FCM 푸시 알림 ─────────────────────────────
-
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const VAPID_KEY = 'BJSY9pFhsVuxlPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
 
