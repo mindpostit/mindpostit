@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, collection, addDoc, getDocs, updateDoc,
+  getFirestore, collection, addDoc, getDocs, updateDoc, setDoc,
   doc, query, orderBy, where, serverTimestamp, onSnapshot
 } from 'firebase/firestore';
 import {
@@ -181,14 +181,10 @@ export const setThreadAlert = async (threadId, isAlert) => {
   }
 };
 
-export { analytics, auth, db };
-export default db;
-
 // ── FCM 푸시 알림 ─────────────────────────────
 
 const VAPID_KEY = 'BJSY9pFhsVuxlPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
 
-// FCM 토큰 요청 및 저장
 export const requestNotificationPermission = async (userId) => {
   try {
     const permission = await Notification.requestPermission();
@@ -198,13 +194,14 @@ export const requestNotificationPermission = async (userId) => {
     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
     if (!token) return { success: false, reason: 'no_token' };
 
-    // Firestore에 토큰 저장
-    await updateDoc(doc(db, 'users', userId), { fcmToken: token, updatedAt: serverTimestamp() })
-      .catch(async () => {
-        // 문서 없으면 새로 생성
-        await addDoc(collection(db, 'users'), { userId, fcmToken: token, updatedAt: serverTimestamp() });
-      });
+    // userId를 문서 ID로 사용해서 저장 (merge: true로 덮어쓰기)
+    await setDoc(doc(db, 'users', userId), {
+      userId,
+      fcmToken: token,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
 
+    console.log('FCM 토큰 저장 완료:', token);
     return { success: true, token };
   } catch (error) {
     console.error('알림 권한 오류:', error);
@@ -212,8 +209,10 @@ export const requestNotificationPermission = async (userId) => {
   }
 };
 
-// 포그라운드 메시지 수신
 export const onForegroundMessage = (callback) => {
   const messaging = getMessaging(app);
   return onMessage(messaging, callback);
 };
+
+export { analytics, auth, db };
+export default db;
