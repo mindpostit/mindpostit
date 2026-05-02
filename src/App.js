@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Intro from './Intro';
 import {
   signInAnon, signUpWithEmail, signInWithEmail, resetPassword, logOut,
   onAuthChange, createThread, addMessage, subscribeMessages,
@@ -50,7 +49,7 @@ const centerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'cen
 export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [view, setView] = useState('intro');
+  const [view, setView] = useState('splash');
   const [currentThread, setCurrentThread] = useState(null);
   const [prevView, setPrevView] = useState('intro');
 
@@ -76,7 +75,6 @@ export default function App() {
 
   return (
     <div style={pageStyle}>
-      {view === 'intro' && <Intro setView={setView} user={user} setPrevView={setPrevView} />}
       {view === 'splash' && <Splash setView={setView} user={user} />}
       {view === 'write' && <Write user={user} setView={setView} />}
       {view === 'done' && <Done setView={setView} setPrevView={setPrevView} user={user} />}
@@ -91,8 +89,41 @@ export default function App() {
 
 // ── 스플래시 ─────────────────────────────────
 function Splash({ setView, user }) {
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
+      {showModal && (
+        <div
+          onClick={() => setShowModal(false)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(39,37,35,.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '18px', padding: '22px 20px', width: '100%', maxWidth: '320px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <span style={{ fontSize: '15px', fontWeight: '800', color: C.ink }}>이용 방법</span>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: '16px', color: C.soft, cursor: 'pointer', padding: '0' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6c655d', lineHeight: '1.8', marginBottom: '16px' }}>판단 없이 들어주는 1:1 개인 공간이에요. 진짜 사람이 직접 읽고 답장을 남겨요.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
+              {[
+                { n: '1', title: '익명으로 남기기', desc: '이름 없이 바로 시작할 수 있어요.' },
+                { n: '2', title: '답장 기다리기', desc: '진짜 사람이 직접 읽고 답장을 남겨요.' },
+                { n: '3', title: '내 공간에서 확인', desc: '로그인하면 이야기와 답장이 쌓여요.' },
+              ].map(({ n, title, desc }) => (
+                <div key={n} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#f3ede4', border: `0.5px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#7a7168', flexShrink: 0 }}>{n}</span>
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: C.ink, margin: '0 0 2px' }}>{title}</p>
+                    <p style={{ fontSize: '11px', color: C.muted, margin: 0, lineHeight: '1.6' }}>{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button style={btnFill} onClick={() => { setShowModal(false); setView('write'); }}>지금 남기기</button>
+          </div>
+        </div>
+      )}
+
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <div style={{ fontSize: '13px', fontWeight: '400', letterSpacing: '.1em', color: '#a29789', marginBottom: '22px', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
         <h1 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
@@ -109,13 +140,13 @@ function Splash({ setView, user }) {
         ) : (
           <>
             <button style={btnOutline} onClick={() => setView('login')}>로그인 · 나만의 공간</button>
-            <button style={btnSoft} onClick={() => setView('intro')}>먼저 둘러보기</button>
+            <button style={btnSoft} onClick={() => setShowModal(true)}>이용 방법</button>
           </>
         )}
       </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
-        {['익명 가능', 'AI 아님', '빠른 답장'].map(t => (
+        {['익명 가능', '사람이 읽음', '진심 답장'].map(t => (
           <span key={t} style={{ padding: '4px 9px', borderRadius: '999px', border: `1px solid ${C.line}`, background: '#f7f0e7', fontSize: '11px', color: '#6d665d' }}>{t}</span>
         ))}
       </div>
@@ -265,7 +296,7 @@ function Done({ setView, setPrevView, user }) {
 }
 
 // ── 로그인 ───────────────────────────────────
-function Login({ setView, setUser, prevView = 'intro' }) {
+function Login({ setView, setUser, prevView = 'splash' }) {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [loading, setLoading] = useState(false);
