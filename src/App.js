@@ -78,7 +78,7 @@ export default function App() {
       {view === 'intro' && <Intro setView={setView} user={user} setPrevView={setPrevView} />}
       {view === 'splash' && <Splash setView={setView} user={user} />}
       {view === 'write' && <Write user={user} setView={setView} />}
-      {view === 'done' && <Done setView={setView} setPrevView={setPrevView} />}
+      {view === 'done' && <Done setView={setView} setPrevView={setPrevView} user={user} />}
       {view === 'login' && <Login setView={setView} setUser={setUser} prevView={prevView} />}
       {view === 'reset' && <ResetPassword setView={setView} />}
       {view === 'signup' && <Signup setView={setView} setUser={setUser} />}
@@ -157,7 +157,7 @@ function Write({ user, setView }) {
 
         <textarea
           value={content}
-          onChange={e => setContent(e.target.value)}
+          onChange={e => setContent(e.target.value.slice(0, 500))}
           placeholder={placeholder}
           rows={7}
           style={{ width: '100%', background: '#f8f2e8', border: `1px solid ${C.line}`, borderRadius: '9px', padding: '10px', fontSize: '12px', lineHeight: '1.75', color: '#4d4943', resize: 'none', outline: 'none', fontFamily: "'Noto Sans KR', sans-serif", marginBottom: '8px' }}
@@ -193,7 +193,7 @@ function Write({ user, setView }) {
 }
 
 // ── 전송 완료 ────────────────────────────────
-function Done({ setView, setPrevView }) {
+function Done({ setView, setPrevView, user }) {
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
       <div style={{ width: '130px', margin: '0 auto 16px', background: C.paper, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '12px 10px', transform: 'rotate(-2deg)', position: 'relative', boxShadow: '0 4px 10px rgba(38,37,34,.06)' }}>
@@ -204,12 +204,18 @@ function Done({ setView, setPrevView }) {
 
       <h2 style={{ fontSize: '20px', fontWeight: '900', textAlign: 'center', letterSpacing: '-.02em', marginBottom: '6px' }}>남겨줘서 고마워요.</h2>
       <p style={{ fontSize: '12px', lineHeight: '1.75', textAlign: 'center', color: C.muted, marginBottom: '14px' }}>
-        남겨준 이야기는<br />차분히 읽고<br />짧게 답장을 남겨둘게요.
+        남겨준 이야기는<br />차분히 읽고 답장을 남겨둘게요.
       </p>
 
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-        <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('login'); }}>로그인하고 답장 받기</button>
-        <button style={btnOutline} onClick={() => { setPrevView && setPrevView('done'); setView('signup'); }}>처음 오셨나요? 회원가입</button>
+        {user && !user.isAnonymous ? (
+          <button style={btnFill} onClick={() => setView('home')}>내 공간 보러 가기</button>
+        ) : (
+          <>
+            <button style={btnFill} onClick={() => { setPrevView && setPrevView('done'); setView('login'); }}>로그인하고 답장 받기</button>
+            <button style={btnOutline} onClick={() => { setPrevView && setPrevView('done'); setView('signup'); }}>처음 오셨나요? 회원가입</button>
+          </>
+        )}
         <button style={btnSoft} onClick={() => setView('splash')}>처음으로</button>
       </div>
 
