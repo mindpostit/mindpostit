@@ -609,17 +609,29 @@ function AdminView({ user, setUser }) {
           [...new Map(threads.map(t => [t.userId, t])).values()].map(t => {
             const ut = threads.filter(x => x.userId === t.userId);
             const hasNew = ut.some(x => x.status === 'waiting');
+            const isAnon = t.isAnonymous;
+            // 유저 식별자: 익명이면 "익명", 아니면 userId 앞 8자
+            const displayId = isAnon ? '익명' : `회원 ${t.userId?.slice(0, 8)}...`;
+            const avatar = isAnon ? '익' : t.userId?.slice(0, 1).toUpperCase();
+            // 마지막 메시지: 준의 답장이 아니라 유저 글만 보여줘야 함
+            const userThreads = ut.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+            const latestThread = userThreads[0];
+
             return (
-              <div key={t.userId} onClick={() => setSelected(t)} style={{ display: 'flex', gap: '9px', alignItems: 'flex-start', background: C.paper, border: `1px solid ${hasNew ? C.ink : C.line}`, borderRadius: '11px', padding: '10px 11px', marginBottom: '7px', cursor: 'pointer' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: hasNew ? C.ink : '#e9dfd2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', color: hasNew ? '#f8f4ed' : '#5a544c', flexShrink: 0 }}>{t.userId?.slice(0, 1).toUpperCase()}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+              <div key={t.userId} style={{ display: 'flex', gap: '9px', alignItems: 'flex-start', background: C.paper, border: `1px solid ${hasNew ? C.ink : C.line}`, borderRadius: '11px', padding: '10px 11px', marginBottom: '7px' }}>
+                <div onClick={() => setSelected(latestThread)} style={{ width: '30px', height: '30px', borderRadius: '50%', background: hasNew ? C.ink : '#e9dfd2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', color: hasNew ? '#f8f4ed' : '#5a544c', flexShrink: 0, cursor: 'pointer' }}>{avatar}</div>
+                <div onClick={() => setSelected(latestThread)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '700', color: C.ink }}>{t.userId?.slice(0, 10)}...</span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: C.ink }}>{displayId}</span>
                     <span style={{ fontSize: '9px', color: '#ada497' }}>{fmt(t.updatedAt)}</span>
                   </div>
-                  <p style={{ fontSize: '10px', color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.lastMessage}</p>
+                  <p style={{ fontSize: '10px', color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{latestThread?.lastMessage}</p>
                   <span style={{ display: 'inline-block', marginTop: '3px', padding: '2px 6px', borderRadius: '999px', background: '#ece4d8', border: '1px solid #dad1c3', fontSize: '9px', fontWeight: '700', color: '#6f675e' }}>{hasNew ? '미답장' : '완료'} · {ut.length}건</span>
                 </div>
+                <button
+                  onClick={async (e) => { e.stopPropagation(); if (!window.confirm(`${displayId}의 모든 글을 삭제할까요?`)) return; for (const th of ut) { await deleteThread(th.id); } }}
+                  style={{ fontSize: '11px', color: '#c0a09a', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', flexShrink: 0, alignSelf: 'flex-start', marginTop: '2px' }}
+                >✕</button>
               </div>
             );
           })
