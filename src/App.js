@@ -65,17 +65,11 @@ export default function App() {
   const goThread = (t) => { setCurrentThread(t); setView('thread'); };
   const goLogin = (from) => { setPrevView(from); setView('login'); };
 
-  if (!authReady) return (
-    <div style={{ ...pageStyle, ...centerStyle }}>
-      <p style={{ fontSize: '13px', fontWeight: '300', color: C.soft }}>잠깐만요...</p>
-    </div>
-  );
-
   if (user && isAdmin(user)) return <AdminView user={user} setUser={setUser} />;
 
   return (
     <div style={pageStyle}>
-      {view === 'splash' && <Splash setView={setView} user={user} />}
+      {view === 'splash' && <Splash setView={setView} user={user} authReady={authReady} />}
       {view === 'write' && <Write user={user} setView={setView} />}
       {view === 'done' && <Done setView={setView} setPrevView={setPrevView} user={user} />}
       {view === 'login' && <Login setView={setView} setUser={setUser} prevView={prevView} />}
@@ -125,7 +119,7 @@ function Splash({ setView, user }) {
       )}
 
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div style={{ fontSize: '13px', fontWeight: '400', letterSpacing: '.1em', color: '#a29789', marginBottom: '22px', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</div>
+        <div style={{ fontSize: '13px', fontWeight: '400', letterSpacing: '.1em', color: '#a29789', marginBottom: '22px', fontFamily: "'Jua', sans-serif" }}>마인드포스팃</div>
         <h1 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
           어떤 이야기든,<br />여기선 괜찮아요.
         </h1>
@@ -489,7 +483,7 @@ function Home({ user, setView, setUser, goThread }) {
   return (
     <div style={{ ...pageStyle, padding: '18px 18px 40px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto 14px' }}>
-        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Do Hyeon', sans-serif" }}>마인드포스팃</span>
+        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Jua', sans-serif" }}>마인드포스팃</span>
         <button onClick={doLogout} style={{ fontSize: '10px', color: '#a39a8f', background: 'none', border: 'none', cursor: 'pointer' }}>로그아웃</button>
       </div>
 

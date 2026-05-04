@@ -197,7 +197,7 @@ export const deleteThread = async (threadId) => {
 
 // ── FCM 푸시 알림 ─────────────────────────────
 
-const VAPID_KEY = 'BJSY9pFhsVuxIPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
+const VAPID_KEY = 'BJSY9pFhsVuxlPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
 
 export const requestNotificationPermission = async (userId) => {
   try {
