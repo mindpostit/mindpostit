@@ -9,7 +9,6 @@ import {
   onAuthStateChanged, linkWithCredential, EmailAuthProvider
 } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBG5MofvBCD0y93vL-gT39bx76rNJWvztE",
@@ -193,39 +192,6 @@ export const deleteThread = async (threadId) => {
     console.error('스레드 삭제 오류:', error);
     return { success: false, error };
   }
-};
-
-// ── FCM 푸시 알림 ─────────────────────────────
-
-const VAPID_KEY = 'BJSY9pFhsVuxlPr-LHGPI5-Hl27HkdS5vlczEcI7HEYAi9W1Kww1KHaB973myJMSdxAaugb5iso7g_S28mbGQx8';
-
-export const requestNotificationPermission = async (userId) => {
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return { success: false, reason: 'denied' };
-
-    const messaging = getMessaging(app);
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-    if (!token) return { success: false, reason: 'no_token' };
-
-    // userId를 문서 ID로 사용해서 저장 (merge: true로 덮어쓰기)
-    await setDoc(doc(db, 'users', userId), {
-      userId,
-      fcmToken: token,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-
-    console.log('FCM 토큰 저장 완료:', token);
-    return { success: true, token };
-  } catch (error) {
-    console.error('알림 권한 오류:', error);
-    return { success: false, error };
-  }
-};
-
-export const onForegroundMessage = (callback) => {
-  const messaging = getMessaging(app);
-  return onMessage(messaging, callback);
 };
 
 export { analytics, auth, db };
