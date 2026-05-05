@@ -49,7 +49,7 @@ const centerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'cen
 export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [view, setView] = useState('splash');
+  const [view, setView] = useState('appsplash');
   const [currentThread, setCurrentThread] = useState(null);
   const [prevView, setPrevView] = useState('splash');
 
@@ -63,20 +63,50 @@ export default function App() {
   }, [authReady, user]);
 
   const goThread = (t) => { setCurrentThread(t); setView('thread'); };
-  const goLogin = (from) => { setPrevView(from); setView('login'); };
 
-  if (user && isAdmin(user)) return <AdminView user={user} setUser={setUser} />;
+  if (user && isAdmin(user)) return <AdminView user={user} setUser={setUser} setView={setView} />;
 
   return (
     <div style={pageStyle}>
+      {view === 'appsplash' && <AppSplash setView={setView} />}
       {view === 'splash' && <Splash setView={setView} user={user} authReady={authReady} />}
+      {view === 'guestgate' && <GuestGate setView={setView} setPrevView={setPrevView} />}
       {view === 'write' && <Write user={user} setView={setView} />}
       {view === 'done' && <Done setView={setView} setPrevView={setPrevView} user={user} />}
       {view === 'login' && <Login setView={setView} setUser={setUser} prevView={prevView} />}
       {view === 'reset' && <ResetPassword setView={setView} />}
-      {view === 'signup' && <Signup setView={setView} setUser={setUser} />}
+      {view === 'signup' && <Signup setView={setView} setUser={setUser} prevView={prevView} />}
       {view === 'home' && <Home user={user} setView={setView} setUser={setUser} goThread={goThread} />}
       {view === 'thread' && <Thread thread={currentThread} setView={setView} />}
+    </div>
+  );
+}
+
+// ── 앱 스플래시 (로딩) ────────────────────────
+function AppSplash({ setView }) {
+  const [showLogo, setShowLogo] = useState(false);
+  const [showSub, setShowSub] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setShowLogo(true), 50);
+    const t2 = setTimeout(() => setShowSub(true), 700);
+    const t3 = setTimeout(() => setView('splash'), 2000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [setView]);
+
+  const fadeStyle = (show) => ({
+    opacity: show ? 1 : 0,
+    transform: show ? 'translateY(0)' : 'translateY(8px)',
+    transition: 'opacity 0.7s ease, transform 0.7s ease',
+  });
+
+  return (
+    <div style={{ ...pageStyle, ...centerStyle, background: '#262522' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '50px', fontWeight: '400', letterSpacing: '.06em', color: '#f8f4ed', fontFamily: "'Gasoek One', sans-serif", marginBottom: '14px', ...fadeStyle(showLogo) }}>마인드포스팃</div>
+        <div style={{ width: '1px', height: '24px', background: 'rgba(248,244,237,.25)', margin: '0 auto 14px', ...fadeStyle(showLogo) }} />
+        <p style={{ fontSize: '13px', fontWeight: '300', color: 'rgba(248,244,237,.5)', letterSpacing: '.06em', ...fadeStyle(showSub) }}>충분히 들어줄게요.</p>
+      </div>
     </div>
   );
 }
@@ -97,12 +127,12 @@ function Splash({ setView, user }) {
               <span style={{ fontSize: '15px', fontWeight: '800', color: C.ink }}>이용 방법</span>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: '16px', color: C.soft, cursor: 'pointer', padding: '0' }}>✕</button>
             </div>
-            <p style={{ fontSize: '12px', color: '#6c655d', lineHeight: '1.8', marginBottom: '16px' }}>판단 없이 들어주는 1:1 개인 공간이에요. 진짜 사람이 직접 읽고 답장을 남겨요.</p>
+            <p style={{ fontSize: '12px', color: '#6c655d', lineHeight: '1.8', marginBottom: '16px' }}>판단 없이 들어주는 1:1 경청 공간이에요. 이름은 공개되지 않고, 진짜 사람이 직접 읽고 답장을 남겨요.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
               {[
-                { n: '1', title: '익명으로 남기기', desc: '이름 없이 바로 시작할 수 있어요.' },
-                { n: '2', title: '답장 기다리기', desc: '진짜 사람이 직접 읽고 답장을 남겨요.' },
-                { n: '3', title: '내 공간에서 확인', desc: '로그인하면 이야기와 답장이 쌓여요.' },
+                { n: '1', title: '회원가입 후 익명으로 남기기', desc: '이름은 절대 공개되지 않아요.' },
+                { n: '2', title: '진짜 사람이 읽고 답장', desc: 'AI 자동응답이 아니에요. 직접 읽고 담백하게 답장해요.' },
+                { n: '3', title: '내 공간에서 확인', desc: '내 이야기와 답장이 내 공간에만 쌓여요.' },
               ].map(({ n, title, desc }) => (
                 <div key={n} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#f3ede4', border: `0.5px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#7a7168', flexShrink: 0 }}>{n}</span>
@@ -113,22 +143,23 @@ function Splash({ setView, user }) {
                 </div>
               ))}
             </div>
-            <button style={btnFill} onClick={() => { setShowModal(false); setView('write'); }}>지금 남기기</button>
+            <button style={btnFill} onClick={() => { setShowModal(false); user && !user.isAnonymous ? setView('write') : setView('guestgate'); }}>지금 남기기</button>
           </div>
         </div>
       )}
 
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div style={{ fontSize: '13px', fontWeight: '400', letterSpacing: '.1em', color: '#a29789', marginBottom: '22px', fontFamily: "'Jua', sans-serif" }}>마인드포스팃</div>
-        <h1 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
+        <div style={{ fontSize: '34px', fontWeight: '400', letterSpacing: '.08em', color: '#a29789', marginBottom: '22px', fontFamily: "'Gasoek One', sans-serif" }}>마인드포스팃</div>
+        <h1 style={{ fontSize: '36px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
           어떤 이야기든,<br />여기선 괜찮아요.
         </h1>
         <div style={{ width: '1px', height: '22px', background: '#c0b6a8', margin: '14px auto' }} />
         <p style={{ fontSize: '14px', fontWeight: '300', lineHeight: '1.8', color: '#7a7168' }}>충분히 들어줄게요.</p>
       </div>
 
+      <style>{`@keyframes breathe { 0%,100%{transform:scale(1);box-shadow:0 4px 16px rgba(39,37,35,.20)} 50%{transform:scale(1.025);box-shadow:0 8px 28px rgba(39,37,35,.32)} }`}</style>
       <div style={{ width: '100%', maxWidth: '290px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <button style={btnFill} onClick={() => setView('write')}>지금 남기기</button>
+        <button style={{ ...btnFill, animation: 'breathe 2.5s ease-in-out infinite' }} onClick={() => user && !user.isAnonymous ? setView('write') : setView('guestgate')}>지금 남기기</button>
         {user && !user.isAnonymous ? (
           <button style={btnOutline} onClick={() => setView('home')}>내 공간 보러 가기</button>
         ) : (
@@ -145,6 +176,34 @@ function Splash({ setView, user }) {
         ))}
       </div>
       <p style={{ marginTop: '12px', fontSize: '11px', color: C.soft }}>익명으로 시작해도 괜찮아요.</p>
+    </div>
+  );
+}
+
+// ── 비로그인 가입 유도 ────────────────────────
+function GuestGate({ setView, setPrevView }) {
+  const go = (target) => { setPrevView('guestgate'); setView(target); };
+
+  return (
+    <div style={{ ...pageStyle, ...centerStyle }}>
+      <button onClick={() => setView('splash')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '28px 20px 24px', width: '100%', maxWidth: '340px', textAlign: 'center' }}>
+        {/* 익명 처리된 이름 바 */}
+        <div style={{ width: '56px', height: '8px', borderRadius: '4px', background: '#d8d0c6', margin: '0 auto 20px' }} />
+
+        <h2 style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-.02em', color: C.ink, marginBottom: '10px' }}>처음이군요.</h2>
+        <p style={{ fontSize: '12px', lineHeight: '1.8', color: C.muted, marginBottom: '24px' }}>
+          가입하면 익명으로 남기고<br />답장을 받을 수 있어요.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button style={btnFill} onClick={() => go('signup')}>회원가입</button>
+          <button style={btnOutline} onClick={() => go('login')}>이미 계정이 있어요</button>
+        </div>
+
+        <p style={{ fontSize: '11px', color: '#ada496', marginTop: '16px' }}>이름 없이 남겨도, 진심으로 읽어요.</p>
+      </div>
     </div>
   );
 }
@@ -301,7 +360,7 @@ function Login({ setView, setUser, prevView = 'splash' }) {
     if (!email || !pw) { setError('이메일과 비밀번호를 입력해줘요.'); return; }
     setLoading(true); setError('');
     const r = await signInWithEmail(email, pw);
-    if (r.success) { setUser(r.user); setView('home'); }
+    if (r.success) { setUser(r.user); setView(prevView === 'guestgate' ? 'write' : 'home'); }
     else setError(r.message);
     setLoading(false);
   };
@@ -341,7 +400,7 @@ function Login({ setView, setUser, prevView = 'splash' }) {
           <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px' }}>가입하면 달라지는 것</div>
           <div style={{ fontSize: '10px', lineHeight: '1.65', color: '#7d756b' }}>답장 확인 · 대화 보관 · 이어서 남기기</div>
           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-            {[['답장', '빠른 확인'], ['기록', '내 공간 저장']].map(([k, v]) => (
+            {[['답장', '놓치지 않기'], ['기록', '내 공간 저장']].map(([k, v]) => (
               <div key={k} style={{ flex: 1, padding: '6px 8px', borderRadius: '9px', border: '1px solid #e1d6c9', background: '#fffaf3' }}>
                 <div style={{ fontSize: '9px', color: '#978d82' }}>{k}</div>
                 <div style={{ fontSize: '12px', fontWeight: '800', marginTop: '1px', color: '#33312e' }}>{v}</div>
@@ -405,7 +464,7 @@ function ResetPassword({ setView }) {
 }
 
 // ── 회원가입 ─────────────────────────────────
-function Signup({ setView, setUser }) {
+function Signup({ setView, setUser, prevView = 'login' }) {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -418,14 +477,14 @@ function Signup({ setView, setUser }) {
     if (pw.length < 6) { setError('비밀번호는 6자 이상이어야 해요.'); return; }
     setLoading(true); setError('');
     const r = await signUpWithEmail(email, pw);
-    if (r.success) { setUser(r.user); setView('home'); }
+    if (r.success) { setUser(r.user); setView(prevView === 'guestgate' ? 'write' : 'home'); }
     else setError(r.message);
     setLoading(false);
   };
 
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
-      <button onClick={() => setView('login')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+      <button onClick={() => setView(prevView === 'guestgate' ? 'guestgate' : 'login')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
 
       <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
         <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>처음이군요.</div>
@@ -471,7 +530,7 @@ function Home({ user, setView, setUser, goThread }) {
   return (
     <div style={{ ...pageStyle, padding: '18px 18px 40px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto 14px' }}>
-        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Jua', sans-serif" }}>마인드포스팃</span>
+        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Gasoek One', sans-serif" }}>마인드포스팃</span>
         <button onClick={doLogout} style={{ fontSize: '10px', color: '#a39a8f', background: 'none', border: 'none', cursor: 'pointer' }}>로그아웃</button>
       </div>
 
@@ -572,14 +631,14 @@ function Thread({ thread, setView }) {
 }
 
 // ── 관리자 뷰 ────────────────────────────────
-function AdminView({ user, setUser }) {
+function AdminView({ user, setUser, setView }) {
   const [threads, setThreads] = useState([]);
   const [tab, setTab] = useState('inbox');
   const [selected, setSelected] = useState(null);
 
   useEffect(() => subscribeAllThreads(setThreads), []);
 
-  const doLogout = async () => { await logOut(); setUser(null); };
+  const doLogout = async () => { await logOut(); setUser(null); setView('splash'); };
 
   const waiting = threads.filter(t => t.status === 'waiting' && !t.isAlert);
   const alerts = threads.filter(t => t.isAlert);
