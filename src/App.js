@@ -255,7 +255,7 @@ function Write({ user, setView }) {
         />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9b9287', marginBottom: '10px' }}>
-          <span>이름 없이 남길 수 있어요</span>
+          <span>익명으로 남겨져요</span>
           <span>{content.length} / 500</span>
         </div>
 
@@ -270,13 +270,7 @@ function Write({ user, setView }) {
         </button>
 
         <div style={{ marginTop: '9px', fontSize: '10px', lineHeight: '1.65', textAlign: 'center', color: '#9a9186' }}>
-          이름 없이 남고 · 하루가 지나면 사라져요.
-          {(!user || user.isAnonymous) && (
-            <><br /><span
-              onClick={() => setView('login')}
-              style={{ textDecoration: 'underline', color: '#888', cursor: 'pointer' }}
-            >로그인하면 내 이야기와 공간이 생겨요.</span></>
-          )}
+          익명이고, 나만의 공간에 쌓여요.
         </div>
       </div>
     </div>
