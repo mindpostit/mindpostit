@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  signInAnon, signUpWithEmail, signInWithEmail, resetPassword, logOut,
+  signInWithGoogle, logOut,
   onAuthChange, createThread, addMessage, subscribeMessages,
   subscribeUserThreads, subscribeAllThreads, setThreadAlert,
   deleteThread
@@ -59,7 +59,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (authReady && !user) signInAnon();
   }, [authReady, user]);
 
   const goThread = (t) => { setCurrentThread(t); setView('thread'); };
@@ -70,12 +69,10 @@ export default function App() {
     <div style={pageStyle}>
       {view === 'appsplash' && <AppSplash setView={setView} />}
       {view === 'splash' && <Splash setView={setView} user={user} authReady={authReady} />}
-      {view === 'guestgate' && <GuestGate setView={setView} setPrevView={setPrevView} />}
+      {view === 'guestgate' && <GuestGate setView={setView} setPrevView={setPrevView} setUser={setUser} />}
       {view === 'write' && <Write user={user} setView={setView} />}
       {view === 'done' && <Done setView={setView} setPrevView={setPrevView} user={user} />}
       {view === 'login' && <Login setView={setView} setUser={setUser} prevView={prevView} />}
-      {view === 'reset' && <ResetPassword setView={setView} />}
-      {view === 'signup' && <Signup setView={setView} setUser={setUser} prevView={prevView} />}
       {view === 'home' && <Home user={user} setView={setView} setUser={setUser} goThread={goThread} />}
       {view === 'thread' && <Thread thread={currentThread} setView={setView} />}
     </div>
@@ -194,7 +191,7 @@ function Splash({ setView, user }) {
           <button style={btnOutline} onClick={() => setView('home')}>내 공간 보러 가기</button>
         ) : (
           <>
-            <button style={btnOutline} onClick={() => setView('login')}>로그인 · 나만의 공간</button>
+            <button style={btnOutline} onClick={() => setView('login')}>로그인 · 내 공간으로</button>
             <button style={btnSoft} onClick={() => setShowModal(true)}>이용 방법</button>
           </>
         )}
@@ -211,7 +208,8 @@ function Splash({ setView, user }) {
 }
 
 // ── 비로그인 가입 유도 ────────────────────────
-function GuestGate({ setView, setPrevView }) {
+function GuestGate({ setView, setPrevView, setUser }) {
+  const [error, setError] = useState('');
   const go = (target) => { setPrevView('guestgate'); setView(target); };
 
   return (
@@ -228,8 +226,10 @@ function GuestGate({ setView, setPrevView }) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button style={btnFill} onClick={() => go('signup')}>회원가입</button>
-          <button style={btnOutline} onClick={() => go('login')}>이미 계정이 있어요</button>
+          <button style={{ ...btnFill, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', color: C.ink, border: `1px solid ${C.line}` }} onClick={async () => { const r = await signInWithGoogle(); if (r.success) { setUser(r.user); setView('write'); } else setError(r.message); }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" style={{marginRight:'8px'}}><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>구글로 계속하기
+          </button>
+          {error && <p style={{ fontSize: '11px', color: '#c0392b', textAlign: 'center', margin: 0 }}>{error}</p>}
         </div>
 
         <p style={{ fontSize: '11px', color: '#ada496', marginTop: '16px' }}>이름 없이 남겨도, 진심으로 읽어요.</p>
@@ -360,8 +360,10 @@ function Done({ setView, setPrevView, user }) {
           <button style={btnFill} onClick={() => handleAction(() => setView('home'))}>내 공간 보러 가기</button>
         ) : (
           <>
-            <button style={btnFill} onClick={() => handleAction(() => { setPrevView && setPrevView('done'); setView('login'); })}>로그인하고 답장 받기</button>
-            <button style={btnOutline} onClick={() => handleAction(() => { setPrevView && setPrevView('done'); setView('signup'); })}>처음 오셨나요? 회원가입</button>
+            <button style={{ ...btnFill, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleAction(() => setView('login'))}>
+              <svg width="16" height="16" viewBox="0 0 24 24" style={{marginRight:'8px'}}><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              구글로 로그인하고 답장 받기
+            </button>
           </>
         )}
         <button style={btnSoft} onClick={() => handleAction(() => setView('splash'))}>처음으로</button>
@@ -374,157 +376,31 @@ function Done({ setView, setPrevView, user }) {
 
 // ── 로그인 ───────────────────────────────────
 function Login({ setView, setUser, prevView = 'splash' }) {
-  const safeBack = prevView === 'intro' ? 'splash' : prevView;
-  const [email, setEmail] = useState('');
-  const [pw, setPw] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const doLogin = async () => {
-    if (!email || !pw) { setError('이메일과 비밀번호를 입력해줘요.'); return; }
+  const doGoogleLogin = async () => {
     setLoading(true); setError('');
-    const r = await signInWithEmail(email, pw);
+    const r = await signInWithGoogle();
     if (r.success) { setUser(r.user); setView(prevView === 'guestgate' ? 'write' : 'home'); }
-    else setError(r.message);
+    else setError(r.message || '로그인에 실패했어요.');
     setLoading(false);
   };
 
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
-      <button onClick={() => setView(safeBack)} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
-
-      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
-        <div style={{ fontSize: '15px', fontWeight: '800', lineHeight: '1.45', marginBottom: '4px' }}>답장을 놓치지 않으려면</div>
-        <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.muted, marginBottom: '14px' }}>로그인하면 사람이 직접 남긴 답장을 놓치지 않고, 내 이야기와 답장이 내 공간에 남아요.</div>
-
-        <div style={{ marginBottom: '8px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>이메일</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="hello@email.com" style={inputStyle} />
-        </div>
-        <div style={{ marginBottom: '4px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>비밀번호</label>
-          <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" style={inputStyle} onKeyDown={e => e.key === 'Enter' && doLogin()} />
-        </div>
-        <div style={{ textAlign: 'right', marginBottom: '12px' }}>
-          <button onClick={() => setView('reset')} style={{ fontSize: '10px', color: '#aba295', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}>비밀번호 찾기</button>
-        </div>
-
-        {error && <p style={{ fontSize: '11px', color: '#d4433a', marginBottom: '8px', textAlign: 'center' }}>{error}</p>}
-
-        <button style={{ ...btnFill, opacity: loading ? 0.6 : 1, marginBottom: '12px' }} onClick={doLogin} disabled={loading}>{loading ? '로그인 중...' : '로그인'}</button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <div style={{ flex: 1, height: '1px', background: '#d8cfc3' }} />
-          <span style={{ fontSize: '10px', color: '#aba295' }}>처음이라면</span>
-          <div style={{ flex: 1, height: '1px', background: '#d8cfc3' }} />
-        </div>
-        <button style={{ ...btnOutline, marginBottom: '12px' }} onClick={() => setView('signup')}>회원가입</button>
-
-        <div style={{ background: '#f9f3eb', border: `1px solid ${C.line}`, borderRadius: '11px', padding: '9px 10px' }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px' }}>가입하면 달라지는 것</div>
-          <div style={{ fontSize: '10px', lineHeight: '1.65', color: '#7d756b' }}>답장 확인 · 대화 보관 · 이어서 남기기</div>
-          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-            {[['답장', '놓치지 않기'], ['기록', '내 공간 저장']].map(([k, v]) => (
-              <div key={k} style={{ flex: 1, padding: '6px 8px', borderRadius: '9px', border: '1px solid #e1d6c9', background: '#fffaf3' }}>
-                <div style={{ fontSize: '9px', color: '#978d82' }}>{k}</div>
-                <div style={{ fontSize: '12px', fontWeight: '800', marginTop: '1px', color: '#33312e' }}>{v}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// ── 비밀번호 찾기 ─────────────────────────────
-function ResetPassword({ setView }) {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [sent, setSent] = useState(false);
-
-  const doReset = async () => {
-    if (!email) { setError('이메일을 입력해줘요.'); return; }
-    setLoading(true); setError('');
-    const r = await resetPassword(email);
-    if (r.success) setSent(true);
-    else setError('이메일 전송에 실패했어요. 가입된 이메일인지 확인해줘요.');
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ ...pageStyle, ...centerStyle }}>
-      <button onClick={() => setView('login')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 로그인으로</button>
-      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
-        {!sent ? (
-          <>
-            <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>비밀번호를 잊었나요?</div>
-            <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.muted, marginBottom: '18px' }}>가입한 이메일을 입력하면 재설정 링크를 보내드려요.</div>
-            <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>이메일</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="hello@email.com" style={{ ...inputStyle, marginBottom: '14px' }} onKeyDown={e => e.key === 'Enter' && doReset()} />
-            {error && <p style={{ fontSize: '11px', color: '#d4433a', marginBottom: '10px', textAlign: 'center' }}>{error}</p>}
-            <button style={{ ...btnFill, opacity: loading ? 0.6 : 1 }} onClick={doReset} disabled={loading}>
-              {loading ? '보내는 중...' : '재설정 링크 보내기'}
-            </button>
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: '28px', textAlign: 'center', marginBottom: '12px' }}>📬</div>
-            <div style={{ fontSize: '15px', fontWeight: '800', textAlign: 'center', marginBottom: '8px' }}>이메일을 보냈어요.</div>
-            <div style={{ fontSize: '12px', lineHeight: '1.8', color: C.muted, textAlign: 'center', marginBottom: '18px' }}>
-              <span style={{ fontWeight: '700', color: C.ink }}>{email}</span>으로<br />재설정 링크를 보냈어요.<br />메일함을 확인해줘요.
-            </div>
-            <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.soft, textAlign: 'center', marginBottom: '16px', background: C.bg, borderRadius: '9px', padding: '10px' }}>
-              스팸함에도 없다면<br />이메일을 다시 확인해줘요.
-            </div>
-            <button style={btnFill} onClick={() => setView('login')}>로그인으로 돌아가기</button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── 회원가입 ─────────────────────────────────
-function Signup({ setView, setUser, prevView = 'login' }) {
-  const [email, setEmail] = useState('');
-  const [pw, setPw] = useState('');
-  const [pw2, setPw2] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const doSignup = async () => {
-    if (!email || !pw) { setError('이메일과 비밀번호를 입력해줘요.'); return; }
-    if (pw !== pw2) { setError('비밀번호가 일치하지 않아요.'); return; }
-    if (pw.length < 6) { setError('비밀번호는 6자 이상이어야 해요.'); return; }
-    setLoading(true); setError('');
-    const r = await signUpWithEmail(email, pw);
-    if (r.success) { setUser(r.user); setView(prevView === 'guestgate' ? 'write' : 'home'); }
-    else setError(r.message);
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ ...pageStyle, ...centerStyle }}>
-      <button onClick={() => setView(prevView === 'guestgate' ? 'guestgate' : 'login')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
-
-      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '16px 14px', width: '100%', maxWidth: '340px' }}>
-        <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>처음이군요.</div>
-        <div style={{ fontSize: '11px', lineHeight: '1.7', color: C.muted, marginBottom: '14px' }}>닉네임 없이, 이메일만으로 충분해요.</div>
-
-        {[['이메일', 'email', email, setEmail, 'hello@email.com'], ['비밀번호', 'password', pw, setPw, '6자 이상'], ['비밀번호 확인', 'password', pw2, setPw2, '한 번 더']].map(([label, type, val, setter, ph]) => (
-          <div key={label} style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', letterSpacing: '.08em', color: '#6f675d', marginBottom: '4px' }}>{label}</label>
-            <input type={type} value={val} onChange={e => setter(e.target.value)} placeholder={ph} style={inputStyle} onKeyDown={e => e.key === 'Enter' && doSignup()} />
-          </div>
-        ))}
-
-        {error && <p style={{ fontSize: '11px', color: '#d4433a', margin: '8px 0', textAlign: 'center' }}>{error}</p>}
-
-        <button style={{ ...btnFill, marginTop: '6px', opacity: loading ? 0.6 : 1 }} onClick={doSignup} disabled={loading}>{loading ? '가입 중...' : '가입하기'}</button>
-        <p style={{ fontSize: '10px', color: '#9a9186', textAlign: 'center', marginTop: '10px' }}>가입하면 이용약관에 동의한 것으로 간주돼요.</p>
+      <button onClick={() => setView('splash')} style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', fontSize: '12px', color: C.soft, cursor: 'pointer' }}>← 돌아가기</button>
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: '14px', padding: '28px 20px 24px', width: '100%', maxWidth: '340px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-.02em', color: C.ink, marginBottom: '10px' }}>다시 왔군요.</h2>
+        <p style={{ fontSize: '12px', lineHeight: '1.8', color: C.muted, marginBottom: '24px' }}>내 공간으로 돌아가요.</p>
+        <button
+          style={{ ...btnFill, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', color: C.ink, border: `1px solid ${C.line}`, opacity: loading ? 0.6 : 1 }}
+          onClick={doGoogleLogin} disabled={loading}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" style={{marginRight:'8px'}}><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          {loading ? '로그인 중...' : '구글로 계속하기'}
+        </button>
+        {error && <p style={{ fontSize: '11px', color: '#c0392b', marginTop: '12px' }}>{error}</p>}
       </div>
     </div>
   );

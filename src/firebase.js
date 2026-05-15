@@ -6,7 +6,8 @@ import {
 import {
   getAuth, signInAnonymously, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, sendPasswordResetEmail, signOut,
-  onAuthStateChanged, linkWithCredential, EmailAuthProvider
+  onAuthStateChanged, linkWithCredential, EmailAuthProvider,
+  GoogleAuthProvider, signInWithPopup
 } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 
@@ -79,6 +80,19 @@ export const resetPassword = async (email) => {
   } catch (error) {
     console.error('비밀번호 재설정 오류:', error);
     return { success: false, error };
+  }
+};
+
+export const signInWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    return { success: true, user: result.user };
+  } catch (error) {
+    console.error('구글 로그인 오류:', error);
+    let message = '구글 로그인에 실패했어요. 다시 시도해줘요.';
+    if (error.code === 'auth/popup-closed-by-user') message = '로그인 창이 닫혔어요. 다시 시도해줘요.';
+    return { success: false, error, message };
   }
 };
 
