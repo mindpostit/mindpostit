@@ -138,7 +138,7 @@ function AppSplash({ setView }) {
       {/* 건너뛰기 */}
       <button
         onClick={() => setView('splash')}
-        style={{ position: 'absolute', bottom: '240px', fontSize: '11px', color: showSkip ? '#c4bdb4' : 'transparent', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 1s ease' }}
+        style={{ position: 'absolute', bottom: '160px', fontSize: '11px', color: showSkip ? '#c4bdb4' : 'transparent', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 1s ease' }}
       >건너뛰기</button>
     </div>
   );
