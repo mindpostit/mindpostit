@@ -81,51 +81,65 @@ export default function App() {
 
 // ── 앱 스플래시 (로딩) ────────────────────────
 function AppSplash({ setView }) {
-  const [displayed, setDisplayed] = useState('');
-  const [sentenceIdx, setSentenceIdx] = useState(0);
-  const [done, setDone] = useState(false);
-
   const sentences = [
     '괜찮은 척 넘긴 마음이 있나요.',
     '잘 정리되지 않아도 괜찮아요.',
     '지금 마음 그대로,\n익명으로 남겨보세요.',
   ];
-  const pauses = [1500, 1500, 1000];
+  // 각 문장: 페이드인(800ms) → 머무름(2000ms) → 페이드아웃(800ms)
+  const FADE = 800;
+  const HOLD = 2000;
+  const STEP = FADE + HOLD + FADE;
+
+  const [phase, setPhase] = useState(0);
+  // phase: 0~2 = 문장, 3 = 로고, 4 = 전환
+  const [visible, setVisible] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
 
   useEffect(() => {
-    let charIdx = 0;
-    let timer;
-    const current = sentences[sentenceIdx];
-    const type = () => {
-      if (charIdx <= current.length) {
-        setDisplayed(current.slice(0, charIdx));
-        charIdx++;
-        timer = setTimeout(type, 70);
-      } else {
-        timer = setTimeout(() => {
-          if (sentenceIdx < sentences.length - 1) {
-            setSentenceIdx(i => i + 1);
-          } else {
-            setDone(true);
-            setTimeout(() => setView('splash'), 900);
-          }
-        }, pauses[sentenceIdx]);
+    const timers = [];
+    // 건너뛰기 2초 후 노출
+    timers.push(setTimeout(() => setShowSkip(true), 2000));
+
+    const runPhase = (p) => {
+      setPhase(p);
+      setVisible(false);
+      timers.push(setTimeout(() => setVisible(true), 50));
+      if (p < sentences.length) {
+        // 다음 문장으로
+        timers.push(setTimeout(() => setVisible(false), FADE + HOLD));
+        timers.push(setTimeout(() => runPhase(p + 1), STEP));
+      } else if (p === sentences.length) {
+        // 로고 단계
+        timers.push(setTimeout(() => setVisible(false), FADE + 1400));
+        timers.push(setTimeout(() => setView('splash'), FADE + 1400 + FADE));
       }
     };
-    type();
-    return () => clearTimeout(timer);
-  }, [sentenceIdx]);
+    runPhase(0);
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const isLogo = phase === sentences.length;
+  const text = !isLogo ? sentences[phase] : null;
 
   return (
-    <div style={{ ...pageStyle, background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px' }}>
-      <style>{'@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}'}</style>
-      <div style={{ fontSize: '34px', color: '#a29789', fontFamily: "'Black Han Sans', sans-serif", letterSpacing: '.04em', marginBottom: '36px' }}>마인드포스팃</div>
-      <div style={{ opacity: done ? 0 : 1, transition: 'opacity .8s ease', marginBottom: '36px' }}>
-        <p style={{ fontSize: '27px', fontWeight: '700', color: C.ink, lineHeight: '1.7', textAlign: 'center', letterSpacing: '-.01em', whiteSpace: 'pre-line' }}>
-          {displayed}<span style={{ display: 'inline-block', width: '2px', height: '26px', background: C.ink, marginLeft: '2px', verticalAlign: 'middle', animation: 'blink .7s step-end infinite' }} />
-        </p>
+    <div style={{ ...pageStyle, background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
+      <style>{'@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}'}</style>
+
+      {/* 문장 or 로고 */}
+      <div style={{ opacity: visible ? 1 : 0, transition: `opacity ${FADE}ms ease`, textAlign: 'center', whiteSpace: 'pre-line' }}>
+        {!isLogo ? (
+          <p style={{ fontSize: '26px', fontWeight: '900', color: C.ink, lineHeight: '1.75', letterSpacing: '-.02em', margin: 0 }}>{text}</p>
+        ) : (
+          <div style={{ fontSize: '34px', color: '#a29789', fontFamily: "'Black Han Sans', sans-serif", letterSpacing: '.04em' }}>마인드포스팃</div>
+        )}
       </div>
-      <button onClick={() => setView('splash')} style={{ fontSize: '11px', color: '#b0a89e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>건너뛰기</button>
+
+      {/* 건너뛰기 */}
+      <button
+        onClick={() => setView('splash')}
+        style={{ position: 'absolute', bottom: '240px', fontSize: '11px', color: showSkip ? '#c4bdb4' : 'transparent', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 1s ease' }}
+      >건너뛰기</button>
     </div>
   );
 }
