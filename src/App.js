@@ -84,29 +84,51 @@ export default function App() {
 
 // ── 앱 스플래시 (로딩) ────────────────────────
 function AppSplash({ setView }) {
-  const [showLogo, setShowLogo] = useState(false);
-  const [showSub, setShowSub] = useState(false);
+  const [displayed, setDisplayed] = useState('');
+  const [sentenceIdx, setSentenceIdx] = useState(0);
+  const [done, setDone] = useState(false);
+
+  const sentences = [
+    '괜찮은 척 넘긴 마음이 있나요.',
+    '잘 정리되지 않아도 괜찮아요.',
+    '지금 마음 그대로,\n익명으로 남겨보세요.',
+  ];
+  const pauses = [1500, 1500, 1000];
 
   useEffect(() => {
-    const t1 = setTimeout(() => setShowLogo(true), 50);
-    const t2 = setTimeout(() => setShowSub(true), 700);
-    const t3 = setTimeout(() => setView('splash'), 2000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [setView]);
-
-  const fadeStyle = (show) => ({
-    opacity: show ? 1 : 0,
-    transform: show ? 'translateY(0)' : 'translateY(8px)',
-    transition: 'opacity 0.7s ease, transform 0.7s ease',
-  });
+    let charIdx = 0;
+    let timer;
+    const current = sentences[sentenceIdx];
+    const type = () => {
+      if (charIdx <= current.length) {
+        setDisplayed(current.slice(0, charIdx));
+        charIdx++;
+        timer = setTimeout(type, 70);
+      } else {
+        timer = setTimeout(() => {
+          if (sentenceIdx < sentences.length - 1) {
+            setSentenceIdx(i => i + 1);
+          } else {
+            setDone(true);
+            setTimeout(() => setView('splash'), 900);
+          }
+        }, pauses[sentenceIdx]);
+      }
+    };
+    type();
+    return () => clearTimeout(timer);
+  }, [sentenceIdx]);
 
   return (
-    <div style={{ ...pageStyle, ...centerStyle, background: '#262522' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '50px', fontWeight: '400', letterSpacing: '.06em', color: '#f8f4ed', fontFamily: "'Gasoek One', sans-serif", marginBottom: '14px', ...fadeStyle(showLogo) }}>마인드포스팃</div>
-        <div style={{ width: '1px', height: '24px', background: 'rgba(248,244,237,.25)', margin: '0 auto 14px', ...fadeStyle(showLogo) }} />
-        <p style={{ fontSize: '13px', fontWeight: '300', color: 'rgba(248,244,237,.5)', letterSpacing: '.06em', ...fadeStyle(showSub) }}>충분히 들어줄게요.</p>
+    <div style={{ ...pageStyle, background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px' }}>
+      <style>{'@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}'}</style>
+      <div style={{ fontSize: '34px', color: '#a29789', fontFamily: "'Black Han Sans', sans-serif", letterSpacing: '.04em', marginBottom: '36px' }}>마인드포스팃</div>
+      <div style={{ opacity: done ? 0 : 1, transition: 'opacity .8s ease', marginBottom: '36px' }}>
+        <p style={{ fontSize: '27px', fontWeight: '700', color: C.ink, lineHeight: '1.7', textAlign: 'center', letterSpacing: '-.01em', whiteSpace: 'pre-line' }}>
+          {displayed}<span style={{ display: 'inline-block', width: '2px', height: '26px', background: C.ink, marginLeft: '2px', verticalAlign: 'middle', animation: 'blink .7s step-end infinite' }} />
+        </p>
       </div>
+      <button onClick={() => setView('splash')} style={{ fontSize: '11px', color: '#b0a89e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>건너뛰기</button>
     </div>
   );
 }
@@ -117,6 +139,7 @@ function Splash({ setView, user }) {
 
   return (
     <div style={{ ...pageStyle, ...centerStyle }}>
+      <style>{`@keyframes wobble{0%{transform:rotate(-2deg)}20%{transform:rotate(-4deg)}40%{transform:rotate(0deg)}60%{transform:rotate(-3deg)}80%{transform:rotate(-1deg)}100%{transform:rotate(-2deg)}}.postit-wobble{animation:wobble 0.7s ease-in-out infinite}`}</style>
       {showModal && (
         <div
           onClick={() => setShowModal(false)}
@@ -149,7 +172,14 @@ function Splash({ setView, user }) {
       )}
 
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div style={{ fontSize: '34px', fontWeight: '400', letterSpacing: '.08em', color: '#a29789', marginBottom: '22px', fontFamily: "'Gasoek One', sans-serif" }}>마인드포스팃</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '22px' }}>
+          <div style={{ fontSize: '34px', color: '#a29789', fontFamily: "'Black Han Sans', sans-serif", letterSpacing: '.04em', marginBottom: '14px' }}>마인드포스팃</div>
+          {/* 포스트잇 */}
+          <div className="postit-wobble" style={{ position: 'relative', width: '70%', minHeight: '100px', background: '#f7f4ef', border: '1px solid #e2dbd0', borderRadius: '8px', padding: '16px 12px 14px', boxShadow: '0 3px 8px rgba(38,37,34,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', top: '-5px', left: '50%', transform: 'translateX(-50%)', width: '34px', height: '10px', borderRadius: '2px', background: 'rgba(198,188,170,.52)' }} />
+            <p style={{ fontFamily: "'Nanum Brush Script', cursive", fontSize: '26px', color: '#7a7168', margin: 0, textAlign: 'center' }}>괜찮나요?</p>
+          </div>
+        </div>
         <h1 style={{ fontSize: '36px', fontWeight: '900', letterSpacing: '-.04em', lineHeight: '1.5', color: C.ink, marginBottom: '0' }}>
           어떤 이야기든,<br />여기선 괜찮아요.
         </h1>
@@ -524,7 +554,7 @@ function Home({ user, setView, setUser, goThread }) {
   return (
     <div style={{ ...pageStyle, padding: '18px 18px 40px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto 14px' }}>
-        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Gasoek One', sans-serif" }}>마인드포스팃</span>
+        <span style={{ fontSize: '16px', fontWeight: '400', letterSpacing: '.06em', color: '#847b71', fontFamily: "'Black Han Sans', sans-serif" }}>마인드포스팃</span>
         <button onClick={doLogout} style={{ fontSize: '10px', color: '#a39a8f', background: 'none', border: 'none', cursor: 'pointer' }}>로그아웃</button>
       </div>
 
