@@ -8,7 +8,7 @@ import {
 import { validateContent } from './contentFilter';
 
 // ── 관리자 이메일 (준의 실제 이메일로 변경) ──
-const ADMIN_EMAIL = 'peerlabs@naver.com';
+const ADMIN_EMAIL = 'searchgram.kr@gmail.com';
 
 // ── 색상 시스템 ──────────────────────────────
 const C = {
